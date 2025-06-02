@@ -1,0 +1,582 @@
+---
+title: "Day 1: Exploring Data"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r include=FALSE}
+# Ignore this for now
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Introduction to R
+
+This file is an **R Markdown** document. R Markdown documents combine text (with some formatting options), R code, and R outputs including figures. They are a great way to produce self-contained, reproducible, well-documented data analyses.
+
+### a. Basics
+
+Here is an R code chunk with is defined by `{r}`:
+
+```{r}
+# Hashtags are used before text comments to explain what the code is for 
+
+# To submit code, put your cursor *anywhere on the line* and do one of the following:
+# - hit ctrl+enter for PC or cmd+enter for Mac users
+# - click on the play button on the top right of this code chunk
+# - click "Run" on the top right of this pane 
+print("Welcome to R!")
+```
+
+We can use R as a calculator:
+
+```{r}
+6*2 # 6 times 2
+6/2 # 6 divided by 2
+6^2 # 6 squared
+
+##### Try it! #####
+# Multiply 6 by all previous whole numbers (this is called the factorial of 6)
+
+```
+
+But luckily there are some built-in functions (called base R):
+
+```{r}
+# Base R comes with many built-in functions:
+factorial(6)
+
+##### Try it! #####
+# What should we expect for log(100)? What does R give us?
+
+```
+
+To learn more about specific functions, R has a great documentation within R Studio but also online:
+
+```{r eval=FALSE}
+# Put a `?` in front of the function name to pull documentation in the Output pane
+?log
+
+##### Try it! #####
+# In the documentation you can read about the function that computes log base 10.
+# What is log base 10 of 100?
+
+```
+
+### b. Types of objects
+
+The pane in the top right is the **Environment**. This is where objects we work with (like datasets) are saved! The notation `<-` is an assignment operator:
+
+```{r}
+# Let's create some objects 
+species <- "Adelie"
+flipper_length_mm <- 180
+is_male <- TRUE
+
+# What type of object is each one?
+class(species)
+class(flipper_length_mm)
+class(is_male)
+```
+
+Beyond just having an observation, we can consider vectors/variables which we can manipulate:
+
+```{r}
+# Now store multiple values in these objects using a vector with c()
+species <- c("Adelie", "Chinstrap", "Gentoo", "Adelie")
+flipper_length_mm <- c(180, 195, 210, 175)
+is_male <- c(TRUE, FALSE, TRUE, FALSE)
+
+# Summary operations on numeric vectors
+sum(flipper_length_mm)
+length(flipper_length_mm)
+
+##### Try it! #####
+# What is the mean flipper length?
+
+```
+
+More importantly, we will manipulate datasets usually in the form of **dataframes**:
+
+```{r}
+# Build a small data frame from scratch
+penguin_data <- data.frame(
+  species = c("Adelie", "Chinstrap", "Gentoo", "Adelie"),
+  flipper_length_mm = c(180, 195, 210, 175),
+  is_male = c(TRUE, FALSE, TRUE, FALSE))
+
+# Take a look at the whole data
+penguin_data
+
+# Rows = individual penguins, Columns = variables measured
+str(penguin_data)
+
+# Access one variable at a time
+penguin_data$flipper_length_mm
+
+##### Try it! #####
+# Calculate the mean flipper length in this dataframe
+
+```
+
+We will learn more ways to summarize variables!
+
+### c. Packages
+
+Sometimes base R is not enough! R packages are collections of functions and datasets developed by the R community worldwide. You can install a package by typing the function `install.packages(“package_name”)` **in the console** pane.
+
+For example, install the package `tidyverse` (it should already be installed on the server) which is THE reference for manipulating data:
+
+```{r, eval=FALSE}
+# Install the package
+install.packages("tidyverse")
+```
+
+Once a package is installed, you need to load the package to call specific functions from this package using `library(package_name)`:
+
+```{r}
+# Load the package
+library(tidyverse)
+```
+
+Highly recommend this textbook to learn how to use [R for Data Science](https://r4ds.hadley.nz/).
+
+Another package we will use today is `palmerpenguins` which contains a famous dataset:
+
+```{r eval=FALSE, warning=FALSE}
+# Install the package containing the dataset
+install.packages("palmerpenguins")
+
+# Read the documentation
+?palmerpenguins::penguins
+```
+
+```{r warning=FALSE}
+# Load the package
+library(palmerpenguins)
+
+# Save a copy of the dataset in your environment as a dataframe
+my_penguins <- as.data.frame(penguins)
+```
+
+## 2. Exploring Data
+
+When we start exploring data, we should learn about the source and context of the dataset.
+
+#### **Try it! Identify the following information about the dataset:**
+
+-   **Study design:** 
+
+-   **Population:** 
+
+-   **Sample:** 
+
+-   **Number of sampling units:** 
+
+-   **Number of variables:** 
+
+```{r}
+# Type any code here
+
+```
+
+When provided, it is very important to read the documentation to understand how the variables were measured (which unit). For example, in the documentation, we learn that there are 3 species of penguins:
+
+![](https://www.gabemednick.com/post/penguin/featured_hu23a2ff6767279debab043a6c8f0a6157_878472_720x0_resize_lanczos_2.png)
+
+To guide our exploration, we formulate research questions. For example:
+
+-   Are there any differences between the three species of penguins? (this question is a little vague)
+
+-   Are there any differences between the three species of penguins in terms of their flipper length? (this question is more specific)
+
+-   **Write your own**:
+
+Our research question will determine how to analyze our data, which variables are involved, and which statistical model we should consider.
+
+### a. Describing 1 categorical variable
+
+When describing categorical variables, we pay attention to which category are the most/least common. We can visualize a single categorical variable with a bar plot:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_bar and define mapping aesthetics
+  geom_bar(aes(x = species))
+```
+
+We include counts (frequencies) or proportions (relative frequencies) as summary statistics:
+
+```{r}
+my_penguins |>
+  # Report counts for each group
+  count(species) |>
+  # Calculate proportions
+  mutate(proportion = n/sum(n))
+```
+
+### b. Describing 1 numeric variable
+
+When describing numeric variables, we pay attention to what a typical value is (center) and how the values vary from each other (spread), where values are most common and where values are rare (shape).
+
+Since we can have a wide range of different values, especially for continuous variables, it does not necessarily make sense to visualize what *exact value* is the most common but rather focus on what *range of values* is the most common using a histogram:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = flipper_length_mm), 
+                 # Set bin width and center 
+                 binwidth = 5, center = 2.5, color = "black")
+```
+
+#### **Try it! Play around with the values for binwidth and center. Notice how the shape of the histogram changes depending on how we define the bins?**
+
+```{r}
+# Type any code here
+
+```
+
+We report values of center (mean or median) and spread (standard deviation or IQR) as summary statistics:
+
+```{r}
+my_penguins |>
+  # Summary statistics
+  summarize(
+    mean = mean(flipper_length_mm, na.rm = TRUE),
+    median = median(flipper_length_mm, na.rm = TRUE),
+    sd = sd(flipper_length_mm, na.rm = TRUE),
+    IQR = IQR(flipper_length_mm, na.rm = TRUE),
+    min_mass = min(flipper_length_mm, na.rm = TRUE),
+    max_mass = max(flipper_length_mm, na.rm = TRUE))
+```
+
+Another common graph for numeric variables is a boxplot which represents the 5-number summary of a variable: minimum, first quartile, median, third quartile, maximum (delimiting the lower point of the whisker, the lower bar of the box, the solid bar in the box, the upper bar of the box, and the upper point of the whisker, respectively):
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_boxplot and define mapping aesthetics
+  geom_boxplot(aes(x = flipper_length_mm))
+```
+
+Boxplots sometimes summarize the data too much (just into five numbers) and we might miss important characteristics of the data. What information are we missing compared to what we could see in the histogram?
+
+Sometimes, we use density plots to display the "smooth" distribution of a numeric variable:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_density and define mapping aesthetics
+  geom_density(aes(x = flipper_length_mm)) 
+```
+
+### c. Describing 1 numeric and 1 categorical variable
+
+When comparing a numeric variable across categories, we may wonder if the distribution of the numeric variable (center, spread, shape) is about the same across all categories or not.
+
+The most convenient way (using R) to compare the distribution of a numeric variable across categories is to use grouped boxplots:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_boxplot and define mapping aesthetics: x = predictor, y = outcome
+  geom_boxplot(aes(x = flipper_length_mm, y = species, fill = species)) +
+  # Add the data
+  geom_jitter(aes(x = flipper_length_mm, y = species))
+```
+
+To compare histograms, we use what we call faceting:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics, x = response
+  geom_histogram(aes(x = flipper_length_mm, fill = species), 
+                 # Set bin width and center 
+                 binwidth = 5, center = 2.5, color = "black") +
+  # Facet per category 
+  facet_wrap(~species, ncol = 1)
+```
+
+We report summary statistics for each species:
+
+```{r}
+my_penguins |>
+  # Split the data in groups 
+  group_by(species) |>
+  # Summary statistics
+  summarize(
+    mean = mean(flipper_length_mm, na.rm = TRUE),
+    median = median(flipper_length_mm, na.rm = TRUE),
+    sd = sd(flipper_length_mm, na.rm = TRUE),
+    IQR = IQR(flipper_length_mm, na.rm = TRUE),
+    min_mass = min(flipper_length_mm, na.rm = TRUE),
+    max_mass = max(flipper_length_mm, na.rm = TRUE))
+```
+
+### d. Describing 2 numeric variables
+
+The relationship between two numeric variables is typically displayed using a scatterplot:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_point and define mapping aesthetics: x = explanatory, y = response
+  geom_point(aes(x = bill_length_mm, y = flipper_length_mm)) 
+```
+
+Correlation describes the strength of a (linear) relationship between two variables. With the function `cor`, we refer by default to the Pearson correlation coefficient which takes values between -1 (strong negative correlation) and 1 (strong positive correlation) with 0 indicating that there is no correlation:
+
+```{r}
+my_penguins |>
+  # Summary statistics
+  summarize(correlation = cor(bill_length_mm, flipper_length_mm, use = "pairwise.complete.obs"))
+```
+
+### e. Describing 2 categorical variables
+
+We can display the relative distribution at each level with a segmented bar plot:
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_bar and define mapping aesthetics with fill
+  geom_bar(aes(x = species, fill = sex), position = "fill") 
+```
+
+#### **Try it! Swap the variables for `x =` and `fill =`. Does the graph look any different? Note that the default label for the y-axis is count. But what does it represent?**
+
+```{r}
+# Type any code here
+
+```
+
+We can report counts for each pair of groups:
+
+```{r}
+my_penguins |>
+  # Report counts for each pair of groups
+  count(species, sex) |>
+  pivot_wider(names_from = sex, values_from = n, values_fill = 0)
+```
+
+But there are two ways to report proportions:
+
+```{r}
+my_penguins |>
+  # Report counts for each pair of groups
+  count(species, sex) |>
+  # Split by one group
+  group_by(species) |>
+  # Calculate proportions
+  mutate(prop = n / sum(n)) |>
+  # Reshape results
+  select(-n) |>
+  pivot_wider(names_from = sex, values_from = prop, values_fill = 0)
+
+my_penguins |>
+  # Report counts for each pair of groups
+  count(species, sex) |>
+  # Split by one group
+  group_by(sex) |>
+  # Calculate proportions
+  mutate(prop = n / sum(n)) |>
+  # Reshape results
+  select(-n) |>
+  pivot_wider(names_from = species, values_from = prop, values_fill = 0)
+```
+
+What's the difference between the two tables above?
+
+### f. Describing more than two variables
+
+Visualizing relationships between more than two variables can be challenging, but it’s possible by incorporating additional visual elements. Some common strategies include:
+
+-   Color: Differentiate categories or represent continuous variables through color gradients.
+
+-   Facet: Recreate the same plot for different categories of one variable.
+
+-   Size: Vary the size of points to indicate another numeric variable.
+
+-   Shape: Use different shapes to represent categories, though this works best with a limited number of categories.
+
+-   Alpha (Transparency): Adjust transparency to handle overlapping data points.
+
+```{r}
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_point and define mapping aesthetics: x = explanatory, y = response
+  geom_point(aes(x = bill_length_mm, y = flipper_length_mm, color = species)) +
+  # Adding labels
+  labs(title = "Relationship between Bill Length and Flipper Length by Penguin Species",
+       subtitle = "n = 342",
+       x = "Bill length (mm)",
+       y = "Flipper length (mm)",
+       caption = "Palmer Station Antarctica LTER and K. Gorman. 2020.") 
+```
+
+-------------------------------------------------------------------------------
+
+#### **Try it! Investigate the following question using a visualization and summary statistics: Do female and male penguins differ in their body mass?**
+
+```{r}
+# Type any code here
+
+```
+
+-------------------------------------------------------------------------------
+
+## 3. Introduction to Hypothesis Testing
+
+Let’s explore this research question:
+
+> Do female and male penguins differ in their body mass?
+
+First of all, we can only learn from complete observations so we remove any missing values for the variables of interest:
+
+```{r}
+# Save a new version of this dataset, removing missing values
+penguins_clean <- my_penguins |>
+  # Filter missing values
+  filter(!is.na(sex), !is.na(body_mass_g))
+```
+
+### a. Calculate observed difference
+
+We calculate the observed difference in mean body mass between the two groups in our sample:
+
+```{r}
+penguins_clean |>
+  # For each group
+  group_by(sex) |>
+  # Summarize data with the mean
+  summarize(mean_mass = mean(body_mass_g)) |>
+  # Find the difference between means
+  summarize(diff = diff(mean_mass)) |>
+  # Only keep this value
+  pull(diff)
+```
+
+We observe a difference!
+
+### b. Build a null distribution
+
+Now we wonder: Could this observed difference have happened just by chance?
+
+To answer that, we simulate what would happen if sex had no real effect on body mass: in other words, if the difference we observed was due only to random sampling. We do this by randomly shuffling the sex labels across all the penguins:
+
+```{r}
+penguins_clean |>
+  # Shuffle sex
+  mutate(shuffled_sex = sample(sex)) |>
+  # Focus on variables of interest
+  select(body_mass_g, sex, shuffled_sex) |>
+  # Only look at first 10 rows
+  head(10)
+```
+
+Then we re-calculate the difference after shuffling:
+
+```{r}
+penguins_clean |>
+  # Shuffle sex
+  mutate(shuffled_sex = sample(sex)) |>
+  # For each group
+  group_by(shuffled_sex) |>
+  # Summarize data with the mean
+  summarize(mean_mass = mean(body_mass_g)) |>
+  # Find the difference between means
+  summarize(diff = diff(mean_mass)) |>
+  # Only keep this value
+  pull(diff)
+```
+
+Now the difference is very small!
+
+Let's repeat that process many times (1,000 times) to build what we call a null distribution of differences we would expect just by chance:
+
+```{r}
+# For reproducibility
+set.seed(3)
+
+# Create a dataframe with 1,000 differences
+repeated_diffs <- data.frame(
+  # Repeat process 1,000 times
+  diff = replicate(1000, {
+    penguins_clean |>
+    # Shuffle sex
+    mutate(shuffled_sex = sample(sex)) |>
+    # For each group
+    group_by(shuffled_sex) |>
+    # Summarize data with the mean
+    summarize(mean_mass = mean(body_mass_g)) |>
+    # Find the difference between means
+    summarize(diff = diff(mean_mass)) |>
+    # Only keep this value
+    pull(diff)
+}))
+```
+
+Each time we randomly reassign the sex labels, we are simulating what body mass differences might look like if there were no actual difference in body mass between male/female penguins. The result is a distribution of differences that could happen just by chance:
+
+```{r}
+repeated_diffs |>
+  # Make a plot
+  ggplot() +
+  # Histogram with differences
+  geom_histogram(aes(x = diff), binwidth = 20, center = 10, color = "black") +
+  # Labels
+  labs(title = "Difference in Mean Body Mass by Shuffled Sex",
+       x = "Difference in Means (g)", y = "Frequency")
+```
+
+### c. Compare observed difference to null distribution
+
+Now, how does the observed difference in our sample compare to this null distribution?
+
+```{r}
+# Histogram with observed value
+repeated_diffs |>
+  # Make a plot
+  ggplot() +
+  # Histogram with differences
+  geom_histogram(aes(x = diff), binwidth = 20, center = 10, color = "black") +
+  # Represent the observed difference
+  geom_vline(xintercept = 683.4118, color = "red", linetype = "dashed") +
+  # Labels
+  labs(title = "Difference in Mean Body Mass by Shuffled Sex",
+       x = "Difference in Means (g)", y = "Frequency")
+```
+
+### d. Find p-value
+
+Finally, let’s calculate the p-value, which tells us how extreme our observed difference is compared to the null distribution: it is the proportion of simulated differences that were as extreme or more extreme than what we observed.
+
+```{r}
+# Estimate p-value
+mean(abs(repeated_diffs$diff) >= 683.4118)
+```
+
+None!
+
+A small p-value suggests that such a difference would be unlikely to occur by chance alone.
+
+------------------------------------------------------------------------
+
+## Recommended Resources
+
+1.  [R for Data Science](https://r4ds.hadley.nz/)
+2.  [Introductory Statistics in R](https://tjfisher19.github.io/introStatModeling/introductory-statistics-in-r.html)
+
