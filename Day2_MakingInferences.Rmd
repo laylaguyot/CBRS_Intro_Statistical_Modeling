@@ -1,0 +1,599 @@
+---
+title: "Day 2: Making Inferences"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r include=FALSE}
+# Ignore this for now
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Always start your R session by setting up the necessary libraries:
+
+```{r warning=FALSE}
+# Load packages
+library(tidyverse)
+library(palmerpenguins)
+```
+
+## 1. From Sample to Population: What should we expect?
+
+When we conduct an experiment, we may have some expectations about the result (theoretical probability) and then there is what we get (empirical probability):
+
+```{r}
+# Toss a coin once
+sample(c("Heads", "Tails"), size = 1)
+```
+
+What if we toss it twice?
+
+```{r}
+# Toss a coin twice
+sample(c("Heads", "Tails"), size = 2, replace = TRUE)
+```
+
+### a. Law of Large Numbers
+
+Let’s simulate coin flips to show how the proportion of getting heads stabilize over time:
+
+```{r}
+# Simulate 1000 coin flips
+coin_flips <- sample(c("Heads", "Tails"), size = 1000, replace = TRUE)
+
+# Calculate the cumulative proportion of Heads
+running_props <- cumsum(coin_flips == "Heads") / seq_along(coin_flips)
+
+# Create a data frame for plotting
+df_flips <- data.frame(
+  flip_number = 1:1000,
+  prop_heads = running_props)
+
+# Represent the proportion of Heads as the number of flips increase
+ggplot(df_flips, aes(x = flip_number, y = prop_heads)) +
+  geom_line(color = "steelblue") +
+  geom_hline(yintercept = 0.5, color = "red", linetype = "dashed") +
+  ylim(0,1) +
+  labs(title = "Running Proportion of Heads Over 1000 Coin Flips",
+    x = "Number of flips",
+    y = "Proportion of Heads")
+```
+
+### b. Binomial Distribution
+
+The binomial distribution models the number of successes in a fixed number of independent trials. Here’s what it looks like for tossing a coin 100 times:
+
+```{r}
+ggplot(data.frame(x = 0:100), aes(x)) +
+  stat_function(fun = dbinom, args = list(size = 100, prob = 0.5), 
+                geom = "bar", n = 101) +
+  labs(title = "Binomial Distribution (n = 100, p = 0.5)", 
+       x = "# of Heads", 
+       y = "Probability")
+```
+
+If we increase the number of trials (n), the binomial distribution looks more and more like a normal distribution:
+
+```{r}
+ggplot(data.frame(x = 0:1000), aes(x)) +
+  # Binomial distribution
+  stat_function(fun = dbinom, args = list(size = 1000, prob = 0.5), 
+                geom = "bar", n = 1001) +
+  # Corresponding normal distribution
+  stat_function(fun = dnorm, args = list(mean = 500, sd = 15), 
+                geom = "line", linewidth = 1, color = "blue") +
+  labs(title = "Binomial Distribution (n = 1000, p = 0.5) with overlayed normal distribution", 
+       x = "Number of Heads", 
+       y = "Probability")
+```
+
+### c. Normal Distribution
+
+A normal distribution, also known as the Gaussian distribution, is a probability distribution for a continuous variable (infinitely many events) that is symmetric around the mean, depicting that data near the mean are more frequent than data far from the mean. It describes many natural phenomena.
+
+Here is the standard normal distribution (with mean 0 and standard deviation 1):
+
+```{r}
+ggplot(data.frame(z = c(-5, 5)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Standard Normal Distribution",
+       x = "z", y = "Density")
+```
+
+#### **Try it! Input different values for `mean` and `sd`. How does changing these values affect the curve?**
+
+```{r}
+# Type any code here
+
+```
+
+We can only find probabilities for a range of values for the normal distribution (probability of getting exactly one value among infinitely many is 0):
+
+```{r}
+ggplot(data.frame(z = c(-5, 5)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
+                geom = "line", linewidth = 1) +
+  # represent an area under the curve
+  stat_function(fun = dnorm, geom = "area", xlim = c(-5,0)) +
+  # place a text annotation on the grid
+  annotate("text", x = -3, y = .3, label = "Pr( Z < 0 ) = 0.5", size = 6) +
+  # place an text annotation on the shaded area
+  annotate("text", x = -.8, y = .15, label = "0.5", size = 7, color = "white") +
+  labs(title = "Standard Normal Distribution",
+       x = "z", y = "Density")
+```
+
+We can calculate the probability of specific areas under the curve:
+
+```{r}
+# Calculate the cumulative distribution up until the value -2.5 for the standard normal distribution
+pnorm(q = -2.5, mean = 0, sd = 1)
+
+# Corresponding graph
+ggplot(data.frame(z = c(-5, 5)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
+                geom = "line", linewidth = 1) +
+  # represent an area under the curve
+  stat_function(fun = dnorm, geom = "area", xlim = c(-5,-2.5)) +
+  labs(title = "Standard Normal Distribution",
+       x = "z", y = "Density")
+```
+
+Under the standard normal distribution, there is only a probability of about 0.006 to get a value 2.5 below the mean, or less.
+
+Any normal distribution (any mean, any standard deviation) can be referred back to the standard normal distribution by calculating z-scores:
+
+$$z = \frac{X-\mu}{\sigma}$$
+
+### d. Sampling
+
+In statistics, we sample individuals from a population. Assume a population of fish has a mean length of 106 mm and standard deviation of 30 mm. Consider sampling one fish from this population:
+
+```{r}
+# Sample 1 individual
+rnorm(n = 1, mean = 106, sd = 30)
+```
+
+Did we all sample the same fish? Why/Why not?
+
+#### **Try it! Assume we all sampled a fish with length 136 mm. Calculate the z-score for this fish. What was the probability to observe a fish of that length or higher?**
+
+```{r}
+# Type any code here
+
+```
+
+Now, let's sample more than one fish, with 100 fish in our sample:
+
+```{r}
+# Sample 100 individuals
+sample_fish <- rnorm(100, mean = 106, sd = 30)
+
+# Represent the distribution
+ggplot(data.frame(length = sample_fish), aes(x = length)) +
+  geom_histogram(binwidth = 5, center = 2.5, color = "black") +
+  labs(title = "Sampled Fish Lengths", x = "Length (mm)", y = "Count")
+```
+
+Did we all sample the same fish? Why/Why not?
+
+Refer to [this applet](https://www.zoology.ubc.ca/~whitlock/Kingfisher/SamplingNormal.htm) for sampling from a normal distribution.
+
+### e. Foundation of Inference: Central Limit Theorem
+
+The Law of Large Numbers tells us that as sample size increases, the empirical proportion (sample statistic) approaches the theoretical probability (population parameter).
+
+The Central Limit Theorem (CLT) helps us understand the distribution of a sample statistic (like the mean). It tells us that if we repeatedly take random samples of size n and calculate the mean, the distribution of those means will be approximately normal, even if the original data is skewed.
+
+Refer to [this applet](https://www.zoology.ubc.ca/~whitlock/Kingfisher/CLT.htm) for demonstrating the Central Limit Theorem with many different types of distributions.
+
+#### **Try it! Assume a population of fish has a mean length of 106 mm and standard deviation of 30 mm. Among a sample of 100 fish, you found a mean fish length of 136 mm. What was the probability to observe this mean of 136 mm or higher?**
+
+```{r}
+# Type any code here
+
+```
+
+## 2. Common Parametric Tests
+
+Parametric tests assume a theoretical null distribution.
+
+Let's go back to the penguins dataset to conduct some common parametric tests in context:
+
+```{r}
+# Save a copy of the dataset in your environment as a dataframe
+my_penguins <- as.data.frame(penguins)
+```
+
+### Student's t-distribution
+
+This distribution is similar to the normal distribution but needs one more parameter: degrees of freedom.
+
+```{r}
+ggplot(data.frame(t = c(-5, 5)), aes(t)) +
+  stat_function(fun = dt, args = list(df = 5), 
+                geom = "line", linewidth = 1) +
+  labs(title = "t-Distribution (df = 5)",
+       x = "t", y = "Density")
+```
+
+The larger the degrees of freedom are, the closer the distribution gets to a normal distribution:
+
+```{r}
+ggplot(data.frame(t = c(-5, 5)), aes(x = t)) +
+  # Standard normal
+  stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
+                geom = "line", linewidth = 1) +
+  # t-distributions
+  stat_function(fun = dt, args = list(df = 1), aes(color = "t (df = 1)"), linewidth = 1) +
+  stat_function(fun = dt, args = list(df = 5), aes(color = "t (df = 5)"), linewidth = 1) +
+  stat_function(fun = dt, args = list(df = 30), aes(color = "t (df = 30)"), linewidth = 1) +
+  stat_function(fun = dt, args = list(df = 100), aes(color = "t (df = 100)"), linewidth = 1) +
+  labs(title = "Normal vs. t-Distributions with Varying Degrees of Freedom",
+       x = "t", y = "Density", color = "Distribution") +
+  scale_color_manual(
+    name = "Distribution",
+    values = c(
+      "t (df = 1)" = "firebrick",
+      "t (df = 5)" = "darkorange",
+      "t (df = 30)" = "forestgreen",
+      "t (df = 100)" = "steelblue",
+      "Normal" = "black"
+    ),
+    breaks = c("t (df = 1)", "t (df = 5)", "t (df = 30)", "t (df = 100)", "Normal")) 
+```
+
+### a. One-sample t-test
+
+From previous research, we learn that Gentoo penguins are about 12 lbs on average, which is about 5440 grams.
+
+![](https://images-cdn.newscred.com/Zz03Zjk2YzA1ODRiMGI2MDEwZTQ3YWZkMDhkODRhYjk4Mg==)
+
+Focusing on this species, answer the research question below:
+
+```{r}
+# Save a copy of the dataset in your environment as a dataframe
+my_gentoo <- my_penguins |>
+  filter(species == "Gentoo")
+```
+
+> Research Question: Is the mean body mass of Gentoo penguins different from 5440 grams?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report mean and sd
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+t.test(my_gentoo$body_mass_g, mu = 5440)
+```
+
+4.  Interpret in context:
+
+
+Note that R provides the 95% confidence interval in the output. Write a sentence to interpret it:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Normality
+
+### b. Independent t-test
+
+> Research Question: Is there a difference in body mass between male and female penguins?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report mean and sd
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+t.test(body_mass_g ~ sex, data = my_penguins, var.equal = TRUE)
+```
+
+4.  Interpret in context:
+
+
+Note that R provides the 95% confidence interval in the output. Write a sentence to interpret it:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Normality
+
+-   Equal variance
+
+
+### F-Distribution
+
+```{r}
+ggplot(data.frame(F = c(0, 5)), aes(x = F)) +
+  stat_function(fun = df, args = list(df1 = 5, df2 = 10), 
+                geom = "line", linewidth = 1) +
+  labs(title = "F Distribution (df1 = 5, df2 = 10)",
+       x = "F", y = "Density")
+```
+
+### c. ANOVA
+
+> Research Question: Is there a difference in body mass between the three species of penguins?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report mean and sd
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+anova_model <- aov(body_mass_g ~ species, data = my_penguins)
+summary(anova_model)
+```
+
+4.  Interpret in context:
+
+
+Note that R does not provide the $R^2$ value confidence interval in the output. However you can calculate it based on the output of the test:
+
+```{r}
+# Calculate R-squared
+
+```
+
+Write a sentence to interpret it:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Normality
+
+-   Equal variance
+
+
+#### Post-Hoc analysis
+
+Are all the species different from one another?
+
+```{r}
+# Run post-hoc analysis for the previous model
+TukeyHSD(anova_model)
+```
+
+#### Chi-squared Distribution
+
+```{r}
+ggplot(data.frame(x2 = c(0, 10)), aes(x2)) +
+  stat_function(fun = dchisq, args = list(df = 3), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Chi-squared Distribution (df = 3)", 
+       x = "x2", y = "Density")
+```
+
+### d. Chi-squared Goodness of Fit
+
+> Research Question: Is there a different amount of penguins for each species?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report frequencies
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+chisq.test(table(my_penguins$species), p=c(1/3,1/3,1/3))
+```
+
+4.  Interpret in context:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Sample size
+
+### e. Chi-squared Test of Independence
+
+> Research Question: Is there a difference in sex distribution across the different species?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report frequencies
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+chisq.test(table(my_penguins$species, my_penguins$sex), correct = FALSE)
+```
+
+4.  Interpret in context:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Sample size
+
+## 3. Failing Assumptions
+
+We can further check some assumptions and consider alternatives if these assumptions are failing.
+
+### a. Equal Variance assumption
+
+Check for equal variance assumption with Levene's test from the `car` package:
+
+```{r warning=FALSE}
+# Call the car package
+library(car)
+
+# Check for equal variances
+leveneTest(body_mass_g ~ sex, data = my_penguins)
+```
+
+There seems to be an issue with equal variance!
+
+When comparing two independent groups, we can conduct a Welch's t-test instead of the independent t-test:
+
+```{r}
+# Conduct a Welch's t-test (var.equal = FALSE)
+t.test(body_mass_g ~ sex, data = my_penguins, var.equal = FALSE)
+```
+
+The difference is still significant.
+
+### b. Normality assumption
+
+Check for equal variance assumption with the Shapiro-Wilk test:
+
+```{r}
+# Check for normality
+shapiro.test(my_penguins$body_mass_g)
+```
+
+There seems to be an issue with normality! However, this test is sensitive to large sample sizes and visual inspection is often more informative in practice:
+
+```{r}
+# Check for normality visually
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = body_mass_g), 
+                 # Set bin width and center 
+                 binwidth = 100, center = 50, color = "black")
+```
+
+This distribution seems slightly skewed to the right. We can apply a log-transformation:
+
+```{r}
+# Check for normality visually for the transformed variable
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = log(body_mass_g)), 
+                 # Set bin width and center 
+                 binwidth = 0.1, center = 0.05, color = "black")
+```
+
+The distribution seems to be more symmetric after transformation.
+
+### c. Considering Nonparametric Tests
+
+In the previous worksheet, we introduced the idea of hypothesis testing with a randomization/permutation test. These tests can be applied when parametric tests fails.
+
+Bootstrapping is also a nonparametric method that estimates sampling variability by resampling from the observed data with replacement. Let's estimate the sampling distribution of the difference in mean body mass between male and female penguins:
+
+```{r}
+# Bootstrap 1000 resamples
+bootstrap_diffs <- data.frame(
+  diff = replicate(1000, {
+    my_penguins |>
+      # Filter missing values
+      filter(!is.na(sex), !is.na(body_mass_g)) |>
+      # For each group
+      group_by(sex) |>
+      # Resample within each group
+      slice_sample(prop = 1, replace = TRUE) |>
+      summarize(mean_mass = mean(body_mass_g)) |>
+      summarize(diff = diff(mean_mass)) |>
+      pull(diff)
+  }))
+```
+
+Let’s visualize the bootstrap distribution:
+
+```{r}
+ggplot(bootstrap_diffs, aes(x = diff)) +
+  # Represent all possible differences
+  geom_histogram(binwidth = 20, color = "black") +
+  # Represent the mean differences
+  geom_vline(aes(xintercept = mean(diff)), color = "darkblue", linetype = "dashed") +
+  labs(title = "Bootstrap Distribution of Difference in Mean Body Mass",
+    x = "Difference in Means (g)", y = "Frequency")
+```
+
+Each bootstrap sample estimates the difference in mean body mass between male and female penguins and the histogram shows how much this difference varies due to sampling. We can use this distribution to compute a confidence interval, for example using quantiles of the bootstrap distribution:
+
+```{r}
+quantile(bootstrap_diffs$diff, probs = c(0.025, 0.975))
+```
+
+There are also some other tests that do not assume a specific distribution such as the Mann-Whitney U Test (Wilcoxon):
+
+```{r}
+wilcox.test(body_mass_g ~ sex, data = my_penguins)
+```
+
+Note that the p-value is slightly higher than for the parametric test above: we say nonparametric are more conservative.
+
+------------------------------------------------------------------------
+
+## Recommended Resources
+
+1.  [R for Data Science](https://r4ds.hadley.nz/)
+2.  [Introductory Statistics in R](https://tjfisher19.github.io/introStatModeling/introductory-statistics-in-r.html)
+3.  [Sampling from a Normal Distribution](https://www.zoology.ubc.ca/~whitlock/Kingfisher/SamplingNormal.htm)
+4.  [Demonstrating the Central Limit Theorem](https://www.zoology.ubc.ca/~whitlock/Kingfisher/CLT.htm)
