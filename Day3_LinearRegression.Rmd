@@ -1,0 +1,443 @@
+---
+title: "Day 3: Linear Regression"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r include=FALSE}
+# Ignore this for now
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Always start your R session by setting up the necessary libraries:
+
+```{r warning=FALSE}
+# Load packages
+library(tidyverse)
+library(palmerpenguins)
+```
+
+When building models, we can only learn from non-missing values, let's ignore those for now:
+
+```{r}
+# Save a version of the penguins dataset, removing any missing values
+penguins_clean <- as.data.frame(penguins) |>
+  # Filter any missing values
+  na.omit()
+```
+
+## 1. Simple Linear Regression
+
+> Research Question: Can we estimate a penguin’s body mass based on its flipper length?
+
+### a. Visualizing the model
+
+We can use the `lm` method to visualize a linear model:
+
+```{r message=FALSE}
+penguins_clean |>
+  # Make a plot
+  ggplot() +
+  # Scatterplot
+  geom_point(aes(x = flipper_length_mm, y = body_mass_g)) +
+  # Visualize regression line
+  geom_smooth(aes(x = flipper_length_mm, y = body_mass_g),
+              method = "lm", se = FALSE)
+```
+
+How did R choose what line to fit this data?
+
+### b. Fitting a model
+
+If we suspect there is a linear relationship between two variables, we can consider a linear model:
+
+```{r}
+# Fit the model: response ~ predictor
+fit_model <- lm(body_mass_g ~ flipper_length_mm, data = penguins_clean)
+
+# Take a look at the model summary
+summary(fit_model)
+```
+
+This output tells us a lot of things. First, it gives us the estimates of the model:
+
+$\widehat{mass} = -5872.09 + 50.15 * flipper_length$
+
+Note: We use the hat to specify that we get predicted values of the response variable (as opposed to `body_mass_g`, the observed values in the dataset).
+
+### c. Predicting values
+
+We can use the equation above to predict values or use an R function:
+
+```{r}
+penguins_clean |> 
+  # Calculate predicted values
+  mutate(predicted = predict(fit_model)) |>
+  # Just show the variables of interest
+  select(flipper_length_mm, body_mass_g , predicted)
+```
+
+We can also find predicted values for new data with only the values for the predictor:
+
+```{r}
+# Find predicted values for new data
+predict(fit_model, newdata = data.frame(flipper_length_mm = 185))
+```
+
+*Note: the `predict()` function only works if the predictor(s) have no missing values.*
+
+### d. Residuals
+
+Our predicted values don't usually match exactly our observed values. The residuals represent the difference between observed values and predicted values:
+
+```{r}
+penguins_clean |> 
+  # First add predicted values based on model
+  mutate(predicted = predict(fit_model)) |> 
+  # Calculate residuals = observed - predicted
+  mutate(residual = resid(fit_model)) |>
+  # Just show the variables of interest
+  select(flipper_length_mm, body_mass_g , predicted, residual)
+```
+
+Let's visualize the residuals:
+
+```{r}
+penguins_clean |> 
+  # First add predicted values based on model
+  mutate(predicted = predict(fit_model)) |> 
+  # Calculate residuals = observed - predicted
+  mutate(residual = resid(fit_model)) |> 
+  # Use a ggplot to represent the relationship
+  ggplot(aes(x = flipper_length_mm, y = body_mass_g)) +
+  # Add the linear model
+  geom_smooth(method = "lm", se = FALSE) + 
+  # Add residuals = vertical segments from observations to predicted
+  geom_segment(aes(xend = flipper_length_mm, yend = predicted), color = "red") +
+  # Display the observed data
+  geom_point() +
+  # Display the predicted (on top of the line)
+  geom_point(aes(y = predicted), size = 2, color = "blue")
+```
+
+A linear regression model is built by minimizing the sum of squared residuals.
+
+#### **Try it! Find the mean of the residuals. Why does it make sense to get this value?**
+
+```{r}
+# Write and submit code here!
+
+```
+
+### e. Assessing Assumptions
+
+In addition to the assumption of a random sample, to validate the use of a simple linear regression model, we should check the following assumptions:
+
+-   Linearity: The relationship between the predictor and the response is linear.
+
+-   Independence of observations: Observations should be independent of each other.
+
+-   Normality of residuals: The residuals are approximately normally distributed.
+
+-   Equal variance (Homoscedasticity): The variability of the residuals is roughly the same across all fitted values.
+
+We can assess these assumptions using the following plots:
+
+```{r}
+# Residuals vs. Fitted values: checks for linearity and constant variance
+plot(fit_model, which = 1)
+
+# Q-Q Residuals: checks if residuals are normally distributed
+plot(fit_model, which = 2)  
+```
+
+There is no clear violation of the assumptions so the assumptions can be considered to be met.
+
+### f. Inference
+
+The notation $\beta_1$ refers to the slope for the population of penguins. Then the hypotheses to test about the significance of the slope are:
+
+1.  Hypotheses:
+
+2.  To find descriptive statistics and 3. Compare the estimate to the claim, we use the model summary:
+
+```{r}
+# Take another look at the model summary
+summary(fit_model)
+```
+
+This data provides evidence that flipper length is a significant linear predictor of body mass (t = 32.56, df = 331, p \< 0.001).
+
+If the slope is significantly different from 0, we can report a confidence interval:
+
+```{r}
+# Calculates 95% confidence intervals for the coefficients
+confint(fit_model, level = 0.95)
+```
+
+For every additional millimeter increase in flipper length, the body mass is expected to increase by between 47.1 to 53.2 grams, on average, at the 95% confidence level.
+
+We can also build a confidence intervals for predicted values:
+
+```{r}
+# Find predicted values for new data
+predict(fit_model, newdata = data.frame(flipper_length_mm = 185), interval = "confidence")
+```
+
+Penguins with a flipper length of 185 mm have a predicted mean body mass between 3341.9 and 3470.6 grams, at the 95% confidence level.
+
+We can add the confidence intervals for predictions when we visualize the linear model:
+
+```{r message=FALSE}
+penguins_clean |>
+  # Make a plot
+  ggplot() +
+  # Scatterplot
+  geom_point(aes(x = flipper_length_mm, y = body_mass_g)) +
+  # Visualize regression line with confidence interval
+  geom_smooth(aes(x = flipper_length_mm, y = body_mass_g),
+              method = "lm", se = TRUE)
+```
+
+Lastly, we can also provide a prediction interval for a predicted value of an individual:
+
+```{r}
+# Find predicted values for new data
+predict(fit_model, newdata = data.frame(flipper_length_mm = 185), interval = "prediction")
+```
+
+A penguin with a flipper length of 185 mm has a predicted body mass between 2629.8 and 4182.7 grams, at the 95% confidence level.
+
+### g. Performance
+
+To quantify performance for linear regression models, we can consider several metrics:
+
+-   the coefficient of determination $R^2$ which reports the percentage of variation in the response variable that can be explained by the predictor variable:
+
+```{r}
+# Report adjusted R-squared of regression model
+summary(fit_model)$adj.r.squared
+```
+
+About 76% of the variation in body mass can be explained by the variation in flipper length. The higher the $R^2$, the better a model fits a dataset. Note that $R^2$ represents a proportion between 0 and 1.
+
+-   the Mean Square Error (MSE) which measures the average squared differences between predicted and observed values:
+
+```{r}
+# Calculate MSE of regression model: mean of residuals squared
+mean(resid(fit_model)^2)
+```
+
+-   the Root Mean Square Error (RMSE) which is the square root of the MSE and measures the average distance between predicted and observed values in the dataset:
+
+```{r}
+# Calculate RMSE of regression model: square root of mean residuals squared
+sqrt(mean(resid(fit_model)^2))
+```
+
+The lower the RMSE, the better a model fits a dataset and the more reliable our predicted values can be. Note that the RMSE is reported in the same unit as the **response** variable.
+
+------------------------------------------------------------------------
+
+#### **Try it! Choose a different numeric variable (other than flipper length) to predict body mass:**
+
+-   **Is this new predictor significantly associated with body mass?**
+
+-   **Do the model assumptions appear to be satisfied?**
+
+-   **How does this model compare to the one using flipper length: is it better at predicting body mass?**
+
+```{r}
+# Type any code here
+
+```
+
+------------------------------------------------------------------------
+
+## 2. Connection to ANOVA
+
+ANOVA and Regression use the same math under the hood!
+
+```{r}
+# Linear Regression
+fit_model <- lm(body_mass_g ~ flipper_length_mm, data = penguins_clean)
+summary(fit_model)
+```
+
+```{r}
+# ANOVA
+anova_model <- aov(body_mass_g ~ flipper_length_mm, data = penguins_clean)
+summary(anova_model)
+```
+
+ANOVA and regression both rely on decomposing variation in the response variable into components. In simple linear regression, we split the total variation in body_mass_g into variation explained by flipper_length_mm (the regression model) and unexplained variation (residuals). The ANOVA table shows these components using sums of squares and reports an F-test to evaluate whether the model explains a significant amount of variability in the response. This is the same F-test reported in the regression summary. So, ANOVA and regression are not separate techniques: they are two lenses to view the same underlying model.
+
+------------------------------------------------------------------------
+
+## 3. Multiple Regression
+
+> Research Question: Can we estimate a penguin’s bill depth based on its bill length for different species?
+
+![](https://allisonhorst.github.io/palmerpenguins/reference/figures/culmen_depth.png)
+
+### a. Visualizing the model
+
+With 3 variables, the visualization becomes tricky but it is still manageable with 2 numeric and 1 categorical variables:
+
+```{r message=FALSE}
+penguins_clean |>
+  # Make a plot
+  ggplot() +
+  # Scatterplot
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = species))
+  # There is no easy way to visualize the regression line for each species
+```
+
+### b. Fitting a model
+
+Let's fit this linear model:
+
+```{r}
+# Fit the model: response ~ predictors
+fit_model <- lm(bill_depth_mm ~ bill_length_mm + species, data = penguins_clean)
+
+# Take a look at the model summary
+summary(fit_model)
+```
+
+We can write the equation for this model:
+
+$\widehat{bill_depth} = 10.56526 + 0.20044 * bill_length - 1.93308 * Chinstrap - 5.10332 * Gentoo$
+
+Note: The categories for species have been switched to dummy variables. One of the categories (first in alphabetical order) is set as the reference.
+
+Let's now visualize the three models:
+
+```{r}
+penguins_clean |> 
+  # First add predicted values based on model
+  mutate(predicted = predict(fit_model)) |> 
+  # Make a plot
+  ggplot() +
+  # Scatterplot
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  # Represent the predicted values on the regression line for each species
+  geom_line(aes(x = bill_length_mm, y = predicted, color = species))
+```
+
+### c. Assessing Assumptions
+
+Let's check the assumptions
+
+```{r}
+# Residuals vs. Fitted values: checks for linearity and constant variance
+plot(fit_model, which = 1)
+
+# Q-Q Residuals: checks if residuals are normally distributed
+plot(fit_model, which = 2)  
+```
+
+There is no clear violation of linearity or normality but maybe about equal variance?
+
+### d. Inference
+
+We need to write a set of hypotheses for each effect (predictor) we are testing in the model:
+
+*Hypothesis Set 1* $H_0$: Controlling for species, bill length does not explain variation in bill depth. 
+$H_A$: Controlling for species, bill length does explain variation in bill depth.
+
+*Hypothesis Set 2* $H_0$: Controlling for bill length, the different species have an equal mean bill depth. 
+$H_A$: Controlling for bill length, the different species do not have an equal mean bill depth.
+
+Take a look again at the model summary:
+
+```{r}
+# View results of the regression model
+summary(fit_model)
+```
+
+Write the conclusion and interpret the slopes:
+
+
+
+
+### e. Performance
+
+Because we have more than one explanatory variable in our model, we will want to use the Adjusted R-squared to talk about model fit as R-squared can only increase:
+
+```{r}
+# Adjusted R-squared
+summary(fit_model)$adj.r.squared
+
+# R-squared
+summary(fit_model)$r.squared
+```
+
+About 76.5% of the variation in bill depth is explained by our model with species and bill length.
+
+### f. Interaction
+
+An interaction in a multiple regression model will tell us if the effect of one explanatory variable on the response variable differs across the other explanatory variable.
+
+Before we run the multiple regression with an interaction, we will need to mean-center our numeric predictors. To center a variable at its mean, just subtract the mean from every value in the dataset.
+
+*Note: It is important to mean-center numeric variables that are part of interaction terms in regression models because it makes the main effects of the variables, as well as the intercept, more interpretable.*
+
+We center the `bill_length_mm` variable:
+
+```{r}
+# Update the dataframe with a new variable
+penguins_clean <- penguins_clean |>
+  # Create a new variable
+  mutate(bill_length_c = bill_length_mm - mean(bill_length_mm))
+```
+
+We can visualize the interaction:
+
+```{r message=FALSE}
+penguins_clean |>
+  # Make a plot
+  ggplot() +
+  # Scatterplot
+  geom_point(aes(x = bill_length_c, y = bill_depth_mm, color = species)) +
+  # Visualize the regression line for each species
+  geom_smooth(aes(x = bill_length_c, y = bill_depth_mm, color = species),
+              method = "lm", se = FALSE)
+```
+
+The lines are not strictly parallel anymore!
+
+Let's fit the model with an interaction (use `*` instead of `+`):
+
+```{r}
+# Fit the model with interaction
+fit_model <- lm(bill_depth_mm ~ bill_length_c + species, data = penguins_clean)
+
+# Take a look at the model summary
+summary(fit_model)
+```
+
+All slopes are significant! The adjusted R-squared has only slightly improved though.
+
+------------------------------------------------------------------------
+
+#### **Try it! Building on your previous model to predict body mass (other than using flipper length), add `sex` as another predictor:**
+
+-   **How does this model compare to the one with only 1 predictor: is it better at predicting body mass controlling for sex?**
+
+-   **Should we consider an interaction?**
+
+```{r}
+# Type any code here
+
+```
+
+------------------------------------------------------------------------
+
+## Recommended Resources
+
+1.  [R for Data Science](https://r4ds.hadley.nz/)
+2.  [Introductory Statistics in R](https://tjfisher19.github.io/introStatModeling/introductory-statistics-in-r.html)
