@@ -1,0 +1,623 @@
+---
+title: "Day 4: Logistic Regression"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r include=FALSE}
+# Ignore this for now
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE}
+# Load packages
+library(tidyverse)
+library(palmerpenguins)
+```
+
+When building models, we can only learn from non-missing values, let's ignore those for now:
+
+```{r}
+# Save a version of the penguins dataset, removing any missing values
+penguins_clean <- as.data.frame(penguins) |>
+  # Filter any missing values
+  na.omit()
+```
+
+So far, we have discussed tests and models with a numeric response (testing about the mean/predicting the mean). What if our response was categorical?
+
+## 1. Chi-squared tests
+
+We will start by discussing Chi-squared tests.
+
+### a. Chi-squared Goodness of Fit
+
+> Research Question: Is there a different amount of penguins for each species?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report frequencies
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+chisq.test(table(penguins_clean$species), p=c(1/3,1/3,1/3))
+```
+
+```{r}
+# Check the distribution with df = 1
+ggplot(data.frame(x2 = c(0, 10)), aes(x2)) +
+  stat_function(fun = dchisq, args = list(df = 2), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Chi-squared Distribution (df = 2)", 
+       x = "x2", y = "Density")
+
+# Check the p-value calculation
+1 - pchisq(q = 28.27, df = 2)
+```
+
+4.  Interpret in context:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Sample size
+
+### b. Chi-squared Test of Independence
+
+> Research Question: Is there a difference in sex distribution across the different species?
+
+1.  Hypotheses:
+
+2.  Find descriptive statistics:
+
+```{r}
+# Make a plot
+
+# Report frequencies
+
+```
+
+3.  Compare the estimate to the claim:
+
+```{r}
+# Conduct the test
+chisq.test(table(penguins_clean$species, penguins_clean$sex), correct = FALSE)
+```
+
+```{r}
+# Check the distribution with df = 1
+ggplot(data.frame(x2 = c(0, 10)), aes(x2)) +
+  stat_function(fun = dchisq, args = list(df = 2), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Chi-squared Distribution (df = 2)", 
+       x = "x2", y = "Density")
+
+# Check the p-value calculation
+1 - pchisq(q = 0.048607, df = 2)
+```
+
+4.  Interpret in context:
+
+
+What do you think about the assumptions?
+
+-   Random sample
+
+-   Independent observations
+
+-   Sample size
+
+What instead of testing for the association, we would like to predict a categorical outcome?
+
+## 2. Introduction to classification
+
+> Research Question: Can the body mass predict if a penguin is male?
+
+Take a look at the relationship between these two variables again:
+
+```{r}
+penguins_clean |>
+  # Make a plot
+  ggplot() +
+  # Use geom_boxplot and define mapping aesthetics: x = predictor, y = outcome
+  geom_boxplot(aes(x = body_mass_g, y = sex, fill = sex)) +
+  # Add the data
+  geom_jitter(aes(x = body_mass_g, y = sex))
+```
+
+Penguins with a large body mass seems more likely to be male.
+
+### a. Random classification
+
+Let's first predict the outcome randomly. For example, a penguin with any value of `body_mass_g` could be either classified as male or female.
+
+```{r}
+# Create a new object
+penguins_pred <- penguins_clean |>
+  # Only keep variables of interest
+  select(body_mass_g, sex) |> 
+  # Create a predicted variable: using the `sample()` function sample 
+  mutate(predicted = sample(x = c("female","male"), # values to sample from
+                            size = nrow(penguins_clean), # how many values to sample
+                            replace = TRUE)) # can use each value more than once
+
+# Take a look at the predicted variable
+head(penguins_pred)
+```
+
+Were our predicted values correct? 
+
+```{r}
+# How do the predicted values compare to the outcome values? 
+table(outcome = penguins_pred$sex, predicted = penguins_pred$predicted) 
+```
+
+Sometimes the predicted values were correct, sometimes were not correct. We can compute the accuracy of our predicted values:
+
+```{r}
+# Accuracy
+mean(penguins_pred$sex == penguins_pred$predicted) 
+```
+
+Do we all get the same accuracy? Why/Why not? Why does it make sense to get about 50% accuracy?
+
+
+### b. Classification based on 1 variable
+
+As observed earlier, we think that higher values of `body_mass_g` seem to indicate than the penguin is more likely to be male:
+
+```{r}
+# Update our new object
+penguins_pred <- penguins_clean |>
+  # Only keep variables of interest
+  select(body_mass_g, sex) |>  
+  # Create another predicted variable based on clump_thickness > 9 
+  mutate(predicted = ifelse(body_mass_g > 5000, 
+                            "male", "female")) 
+
+# Take a look at the new predicted variable
+head(penguins_pred)
+```
+
+Were our predicted values correct? 
+
+```{r}
+# How do the predicted values compare to the outcome values? 
+table(outcome = penguins_pred$sex, predicted = penguins_pred$predicted) 
+```
+
+Very few females were predicted as males (called false positive) but only a few males were predicted correctly as males (true positive). Did the accuracy improve though?
+
+```{r}
+# Accuracy
+mean(penguins_pred$sex == penguins_pred$predicted)
+```
+
+In addition to accuracy, we should consider these two metrics for evaluating our classification:
+
+-   *true positive* rate (TPR): number of truly predicted positive cases over the number of positive cases.
+
+
+-   *false positive* rate (FPR): number of truly negative cases that were falsely predicted to be positive over the number of negative cases.
+
+```{r}
+# Confusion matrix: compare the true outcomes to predicted values
+table(outcome = penguins_pred$sex, predicted = penguins_pred$predicted) |> 
+  # Add total cases for rows and columns 
+  addmargins()
+```
+
+#### **Try it! Based on the table and definitions above, what is the value of TPR? What is the value of FPR? What shall we do to increase the value of TPR? How would it affect the value of FPR?**
+
+```{r}
+# TPR
+
+
+# FPR
+20/444
+```
+
+### d. ROC/AUC
+
+We could try other cutoff values for `body_mass_g` to determine if a penguin is male or not. The trade-off between TPR and FPR can be represented by the Receiver Operating Characteristics (ROC) curve which can help for choosing a cutoff value that maximizes TPR while minimizes FPR. 
+
+We will use the `plotROC` package. Install it if you are using it for the first time:
+
+```{r, eval=FALSE}
+# Install new packages (only needed once!)
+install.packages("plotROC")
+```
+
+Then load the library:
+
+```{r, message=FALSE}
+# Load packages 
+library(plotROC) 
+```
+
+A ROC curve usually represents FPR on the x-axis and the TPR on the y-axis:
+
+```{r}
+penguins_clean |>
+  # Make a plot
+  ggplot() + 
+  # d is the response, m is the predictor
+  geom_roc(aes(d = sex, m = body_mass_g), n.cuts = 10)
+```
+
+*Note: R usually expects the outcome to be coded as 0 and 1, representing a negative and positive outcome, respectively. The warning lets you know how R encoded the outcome.*
+
+The area under the curve (AUC) quantifies how well our classification is predicting the outcome.
+
+```{r}
+# Calculate the area under the curve with function calc_auc()
+calc_auc(penguins_clean |>
+  # Make a plot
+  ggplot() + 
+  # d is the response, m is the predictor
+  geom_roc(aes(d = sex, m = body_mass_g), n.cuts = 10))$AUC
+```
+
+Let's investigate what it means. If we randomly select 2 penguins, one is female and the other is male, we will compare their body mass:
+
+-   if the body mass was higher for the male penguin, we assign a probability of 1 (that agrees with our model),
+
+-   if the body mass was the same for the two penguins, we assign a probability of 0.5,
+
+-   if the body mass was lower for the male penguin, we assign a probability of 0 (that does not agree with our model).
+
+Then we replicate that process 1,000 times.
+
+```{r}
+# Replicate the process 1000 times
+probs <- replicate(1000,{
+  
+  # Sample 1 male penguin
+  rand_positive <- penguins_clean |>
+    filter(sex == "male") |>
+    select(body_mass_g) |>
+    sample_n(size = 1) |> pull()
+  
+  # Sample 1 female penguin
+  rand_negative <- penguins_clean |>
+    filter(sex == "female") |>
+    select(body_mass_g) |>
+    sample_n(size = 1) |> pull()
+  
+  # Assign a probability value according to our model
+  case_when(rand_positive > rand_negative ~ 1, 
+            rand_positive == rand_negative ~ .5, 
+            rand_positive < rand_negative ~ 0)
+})
+
+# AUC
+mean(probs)
+```
+
+You can interpret the AUC as the fact that a randomly selected male penguin has a higher predicted probability to be male than a randomly selected female penguin. On average, about 76% of the time, male penguins will have higher probabilities of being male compared to female penguins. 
+
+In a nutshell: the higher the AUC, the better the model is!
+
+## 3. Logistic Regression
+
+Let's introduce another dataset that contains information about 155 patients with information of their diabetic status and other biological characteristics. Here is a list and description of each variable in the dataset:
+
+| Variable    | Description                                          |
+|-------------|------------------------------------------------------|
+| Subject     | ID variable                                          |
+| Age         | Age of participant (young adult, adult, older adult) |
+| Gender      | Gender (1 = Male, 2 = Female)                        |
+| Diabetic    | Diabetic status (0 = No, 1 = Yes)                    |
+| Edema       | Presence of edema (0 = No, 1 = Yes)                  |
+| Cholesterol | Cholesterol level (mg/dL)                            |
+| Glucose     | Glucose level (mmol/L)                               |
+| BP          | Diastolic blood pressure (mmHg)                      |
+| BMI         | Body mass index (kg/$m^2$)                           |
+| Platelet    | Platelet counts (1,000/mL)                           |
+
+```{r}
+# Upload the data from GitHub
+diabetes <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//diabetes.csv")
+
+# View first 6 rows
+head(diabetes)
+```
+
+> Research Question: Does BMI predict diabetic status?
+
+Before we start investigating the data with a model, explore the data with a visualization and statistics:
+
+```{r}
+# Make a plot
+
+
+# Report statistics
+
+```
+
+*Note: being diabetic will be considered a "positive" case in this context since our response variable takes the value 1 for diabetic patients.*
+
+### a. Visualizing the model
+
+We can use the `glm` method to visualize a logistic model:
+
+```{r message=FALSE}
+diabetes |>
+  # Make a plot
+  ggplot() +
+  # Scatterplot (not the best for this data but convenient here)
+  geom_point(aes(x = BMI, y = Diabetic)) +
+  # Visualize regression curve
+  geom_smooth(aes(x = BMI, y = Diabetic),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)
+```
+
+How did R choose a logistic curve to fit this data?
+
+### b. Fitting a model
+
+We can find the expression of the logistic regression model with the `glm(outcome ~ predictor, family = "binomial")` function (`glm` stands for generalized linear models):
+
+```{r}
+# Fit the model
+fit_model <- glm(Diabetic ~ BMI, data = diabetes, family = "binomial")
+
+# Take a look at the model summary
+summary(fit_model)
+```
+
+We can write the expression of our linear model to predict log-odds with the estimates:
+
+$log(\widehat{odds}) = -3.73531+0.09483*BMI$
+
+This is called the **logit form** of our model. We can write the **odds form** of the model as follows:
+
+$\widehat{odds}=e^{-3.73531}e^{0.09483*BMI}$
+
+We use that model form to interpret the estimates provided in the output of our model, because we interpret the odds rather than the log(odds). We exponentiate the coefficients:
+
+```{r}
+# Exponentiate the coefficients
+exp(fit_model$coefficients)
+```
+
+The "slope" of BMI represents the odds ratio between 2 different values of our explanatory variable.
+
+If the explanatory variable is numeric, the "slope" represents the odds ratio for two values of our explanatory variable spaced one unit apart:
+
+$\beta_1 = \frac{odds for X + 1}{odds for X}$
+
+In our example, the odds for having diabetes are 1.099 times more for each increase of BMI by 1 kg/$m^2$.
+
+If the explanatory variable is categorical, the "slope" represents the odds ratio for two categories of our explanatory variable:
+
+$\beta_1 = \frac{odds for X = 1}{odds for X = 0}$
+
+### c. Predicting values
+
+We can convert odds to probabilities and write the **probability form** of our model as follows:
+
+$\hat{p}=\frac{e^{0.0239}e^{1.099*BMI}} {{1+e^{0.0239}e^{1.099*BMI}}}$
+
+We usually use that model form to make predictions.
+
+```{r}
+# Calculate the corresponding prediction
+predict(fit_model, newdata = data.frame(BMI = 25), type = "response")
+```
+
+A patient with a BMI of 25 kg/$m^2$ has a predicted probability of 20.3% to be diabetic.
+
+*Note: we use the argument `type = "response"` to refer to the probabilities otherwise default would give us the logit values.*
+
+We can use the equation above to predict values or use an R function:
+
+```{r}
+diabetes |> 
+  # Calculate predicted probabilities
+  mutate(predicted = predict(fit_model, type = "response")) |>
+  # Just show the variables of interest
+  select(BMI, Diabetic, predicted)
+```
+
+Which cutoff value should we consider to predict if someone is diabetic or not?
+
+```{r}
+# ROC curve
+diabetes |>
+  # Make a plot
+  ggplot() + 
+  # d is the response, m is the predictor
+  geom_roc(aes(d = Diabetic, m = predict(fit_model, type = "response")), n.cuts = 10)
+```
+
+### d. Error in predicted values
+
+Sometimes our predicted values are correct, sometimes they're not! Recall the concepts of True Positive (correct predicted values) and False Positive (incorrect predicted values).
+
+```{r}
+diabetes |>
+  # Calculate predicted probabilities
+  mutate(predicted = predict(fit_model, type = "response")) |>
+  # Make a plot
+  ggplot() +
+  # Scatterplot (colored by the predicted probabilities)
+  geom_point(aes(x = BMI, y = Diabetic, color = predicted)) +
+  # Visualize regression curve
+  geom_smooth(aes(x = BMI, y = Diabetic),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)
+```
+
+Where are we more likely to have true positive cases? false positive cases?
+
+### e. Assessing our model
+
+We can assess the fit of our model with the area under the ROC curve:
+
+```{r}
+# Calculate the area under the curve with function calc_auc()
+calc_auc(diabetes |>
+  # Make a plot
+  ggplot() + 
+  # d is the response, m is the predictor
+  geom_roc(aes(d = Diabetic, m = predict(fit_model, type = "response")), n.cuts = 10))$AUC
+```
+
+Hmm not so great...
+
+We can also report the deviance (similar to the idea of $SS\_error$ for linear regression) or with the Akaike's Information Criterion (AIC, which takes into account sample size and number of predictors included in the model, somewhat similar to adjusted $R^{2}$ for linear regression).
+
+```{r}
+# Deviance
+fit_model$deviance
+
+# AIC
+fit_model$aic
+```
+
+The model is a better fit if the deviance and AIC are minimal. We mainly use these criteria to compare different logistic regression models.
+
+There is another analogue $R^{2}$ for linear regression for logistic regression called pseudo-$R^{2}$. It does not have a direct interpretation as "percent variance explained" but can be used for comparing models. One common version is McFadden's pseudo-$R^{2}$:
+
+```{r}
+# Calculate McFadden's pseudo R-squared
+1 - (fit_model$deviance / fit_model$null.deviance)
+```
+
+Values between 0.2 and 0.4 are considered good for logistic regression, so... not so great.
+
+### f. Inference
+
+The notation $\beta_1$ refers to the slope for the population. Then the hypotheses to test about the significance of the slope are:
+
+1.  Hypotheses:
+
+2.  To find descriptive statistics and 3. Compare the estimate to the claim, we use the model summary:
+
+```{r}
+# Take another look at the model summary
+summary(fit_model)
+```
+
+This data provides evidence that BMI is a significant predictor of the diabetic status (z = 3.7, p = 0.000216).
+
+If the slope is significantly different from 0, we can report a confidence interval (for the odds):
+
+```{r}
+# Calculates 95% confidence intervals for the coefficients
+exp(confint(fit_model, level = 0.95))
+```
+
+For every additional 1-kg/$m^2$ increase in BMI, the odds for having diabetes are between 1.05 to 1.16 than not, at the 95% confidence level.
+
+------------------------------------------------------------------------
+
+#### **Try it! Choose a different numeric variable (other than BMI) to predict if a patient is diabetic:**
+
+-   **Is this new predictor significantly associated with diabetic status?**
+
+-   **How does this model compare to the one using BMI: is it better at predicting diabetic status?**
+
+```{r}
+# Type any code here
+
+```
+
+------------------------------------------------------------------------
+
+Now, let's also try a predictor that is categorical:
+
+```{r}
+# Fit the model
+fit_model <- glm(Diabetic ~ Age, data = diabetes, family = "binomial")
+
+# Take a look at the model summary
+summary(fit_model)
+```
+
+How to interpret the slopes in this output?
+
+```{r}
+# Type any code here
+
+```
+
+## 4. Multiple Logistic Regression
+
+> Research Question: Is there an interaction between BMI and Age on diabetic status?
+
+Now we should fit a logistic regression model with diabetic status as the response and both BMI and Age as the explanatory variables. In addition, we can consider an interaction term between the two predictors:
+
+```{r}
+# Remember to mean center our numeric predictors involved in the interaction
+diabetes <- diabetes |>
+  mutate(BMI_c = BMI - mean(BMI))
+
+# Define our model
+fit_model <- glm(Diabetic ~ BMI_c*Age, data = diabetes, family = binomial)
+
+# Model summary
+summary(fit_model)
+```
+
+For adults, BMI has a significant effect on diabetic status (z = 3.035, p = 0.0024). For an average BMI, older adults are not more significantly likely to be diabetic compared to adults (z = -0.951, p = 0.3417). For an average BMI, younger adults are not more significantly likely to be diabetic compared to adults (z = -1.064, p = 0.2873). There is also no significant interaction between BMI and age.
+
+Let's interpret the significant effect:
+
+```{r}
+# Exponentiate the coefficients
+exp(fit_model$coefficients)
+```
+
+As BMI increases by 1 kg/$m^2$, the odds of being diabetic are multiplied by 1.096 for adults (reference group).
+
+Finally, we can report the deviance and AIC for this model:
+
+```{r}
+# Deviance
+fit_model$deviance
+
+# AIC
+fit_model$aic
+```
+
+Note that for the model only including BMI as a predictor the deviance was 187.158 and the AIC was 191.158. With our multiple logistic regression model including another predictor and an interaction we did improve the deviance (lower) but not AIC. Which model should we choose?
+
+------------------------------------------------------------------------
+
+#### **Try it! Sometimes we can use models to fill in missing information in our dataset. For example, in `penguins`, some `sex` values were missing. Try to:**
+
+-   **Build a model to predict `sex` based on other known predictors**
+
+-   **Make predictions for the missing values of `sex`**
+
+-   **Evaluate the performance of the model**
+
+```{r}
+# Type any code here
+
+```
+
+------------------------------------------------------------------------
+
+## Recommended Resources
+
+1.  [R for Data Science](https://r4ds.hadley.nz/)
+2.  [Introductory Statistics in R](https://tjfisher19.github.io/introStatModeling/introductory-statistics-in-r.html)
+
