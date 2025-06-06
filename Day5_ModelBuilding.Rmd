@@ -1,0 +1,261 @@
+---
+title: "Day 5: Model Building"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r include=FALSE}
+# Ignore this for now
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE}
+# Load packages
+library(tidyverse)
+```
+
+## 1. Model Building
+
+We will work with data about variables related to blood pressures of Peruvian men who have moved from rural high altitude areas to urban lower altitude areas. A study related to that topic and including similar models is:
+
+Hirschler, V., Gonzalez, C., Molinari, C., Velez, H., Nordera, M., Suarez, R., & Robredo, A. (2019). Blood pressure level increase with altitude in three argentinean indigenous communities. AIMS Public Health, 6(4), 370. <https://dx.doi.org/10.3934%2Fpublichealth.2019.4.370>
+
+```{r}
+# Upload the data from GitHub
+peru_bp <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//peru_bp.csv")
+
+# View first 6 rows
+head(peru_bp)
+```
+
+### a. Exploring data
+
+It is always a good idea to explore our data: 
+
+```{r}
+library(psych)
+# A fancy scatterplot matrix
+pairs.panels(peru_bp[c("Systol","Age","Years","FracLife","Weight","Height","Chin","Forearm","Calf","Pulse")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB", # color of histogram
+             smooth = FALSE, density = FALSE, ellipses = FALSE)
+```
+
+Even though pairwise comparisons do not let us see how multiple predictors might affect the response, we can get a sense of the relationships between each predictor and the response and between the predictors.
+
+### b. Forward selection
+
+We start by comparing two models: a null model (only the intercept) with a full model with all potential predictors.
+
+```{r}
+# Null model
+fit_start <- lm(Systol ~ 1, data = peru_bp)
+
+# Full model
+fit_full <- lm(Systol ~ Age + Years + FracLife + Weight + Height + Chin + Forearm + Calf + Pulse, 
+               data = peru_bp)
+
+# Forward stepwise selection
+fit_step <- step(fit_start, direction = "forward", scope = formula(fit_full))
+summary(fit_step)
+```
+
+At each step, R considers adding each available predictor (`+`). It calculates the AIC (Akaike Information Criterion) for the model if that predictor is added: R chooses the variable that gives the greatest AIC improvement (lowest AIC). We repeat this process until no predictor improves AIC, and the model is finalized.
+
+Why AIC? AIC balances fit and complexity. A lower AIC means a better trade-off between:
+
+-   Goodness-of-fit (how well the model explains the data)
+
+-   Complexity (how simple the model is = fewer predictors is better)
+
+### c. Best subsets
+
+We use the `regsubsets()` function to compare all possible models:
+
+```{r}
+library(leaps)
+# Run best subsets regression
+best_models <- regsubsets(Systol ~ Age + Years + FracLife + Weight + Height + Chin + Forearm + Calf + Pulse,
+                          data = peru_bp,
+                          nvmax = 9, nbest = 1)
+
+# Summarize output
+summary(best_models)
+```
+
+We can see which predictors are recommended to include for each number of predictors. Now we can identify the best based on various criteria:
+
+```{r}
+# Create 2x2 grid of plots
+par(mfrow = c(2, 2))
+
+# Minimize SSE
+plot(summary(best_models)$rss, xlab = "Number of predictors", ylab = "SSE", type = "l")
+
+# Maximize Adjusted R^2
+plot(summary(best_models)$adjr2, xlab = "Number of predictors", ylab = "Adjusted R²", type = "l")
+
+# Minimize Mallow’s Cp
+plot(summary(best_models)$cp, xlab = "Number of predictors", ylab = "Cp", type = "l")
+
+# Minimize BIC
+plot(summary(best_models)$bic, xlab = "Number of predictors", ylab = "BIC", type = "l")
+```
+
+How many predictors would you consider? Which one should be included?
+
+-----------------------------------------------------------------------------
+
+#### **Try it! Fit the model suggested by the best subset algorithm.**
+
+```{r}
+# Type any code here
+
+```
+
+-----------------------------------------------------------------------------
+
+*Note: These methods do not consider any potential issues there might be with the model assumptions for example. We are also not considering potential interaction effects.*
+
+### d. Multicollinearity
+
+Multicollinearity occurs when two or more predictors are highly correlated with each other. 
+This can make it difficult to estimate the individual effect of each predictor on the response.
+
+One way to assess multicollinearity is to look at the **Variance Inflation Factor (VIF)**. 
+A VIF above 5 (or 10, depending on context) suggests potential multicollinearity.
+
+```{r eval=FALSE}
+library(car)
+# Calculate VIF
+vif(fit_model)
+```
+
+## 2. Addressing Potential Issues
+
+Let's explore different datasets and address any potential issues that may come up!
+
+### a. Acoustic of woven fabric
+
+We will work with data from the following study:
+Tang, X., Kong, D., Yan, X. (2018). Multiple Regression Analysis of a Woven Fabric Sound Absorber. Textile Research Journal. https://doi.org/10.1177/0040517518758001
+
+```{r}
+# Upload the data from GitHub
+acoustics <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//acoustics.csv")
+
+# View first 6 rows
+head(acoustics)
+```
+
+-----------------------------------------------------------------------------
+
+#### **Try it! Fit a model to predict the acoustic based on `acoustic3` by (try 1 at a time): air permeability, weight, perforation ratio, thickness. Check assumptions. Any issues arise?**
+
+```{r}
+# Type any code here
+
+```
+
+-----------------------------------------------------------------------------
+
+### b. Roasted hazelnuts
+
+We will work with data from the following study:
+Şimşek, A. (2007). The use of 3D-nonlinear regression analysis in mathematics modeling of colour change in roasted hazelnuts. Journal of food engineering, 78(4), 1361-1370. https://doi.org/10.1016/j.jfoodeng.2006.01.008
+
+```{r}
+# Upload the data from GitHub
+hazelnuts <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//hazelnuts.csv")
+
+# View first 6 rows
+head(hazelnuts)
+```
+
+-----------------------------------------------------------------------------
+
+#### **Try it! Fit a model to predict the `color_change` based on `temperature` and `time`. Check assumptions. Any issues arise?**
+
+```{r}
+# Type any code here
+
+```
+
+-----------------------------------------------------------------------------
+
+Let's consider a polynomial regression:
+
+```{r}
+# Center the predictors and Squared predictors
+hazelnuts <- hazelnuts |>
+  mutate(temp_c = temperature - mean(temperature), 
+         time_c = time - mean(time),
+         temp2 = temp_c^2,
+         time2 = time_c^2,
+         temp_c.time_c = temp_c*time_c)
+
+# Fit the polynomial regression model
+fit_model <- lm(color_change ~ temp_c + temp2 + time_c + time2 + temp_c.time_c, hazelnuts)
+
+# Display the summary table for the regression model 
+summary(fit_model)
+
+# Check assumptions
+plot(fit_model)
+```
+
+### c. Cognition older adults
+
+We will work with data from the following study:
+Sherwood, J., Inouye, C., Webb, S., Zhou A, Anderson, E., & Spink, N. (2019) Relationship between physical and cognitive performance in community dwelling, ethnically diverse older adults: a cross-sectional study. https://doi.org/10.7717/peerj.6159
+
+```{r}
+# Upload the data from GitHub
+cognition <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//cognition.csv")
+
+# View first 6 rows
+head(cognition)
+```
+
+-----------------------------------------------------------------------------
+
+#### **Try it! Fit a model to predict `TMTB` based on `Heart_Rate` and `Education`. Check assumptions. Any issues arise?**
+
+```{r}
+# Type any code here
+
+```
+
+-----------------------------------------------------------------------------
+
+### d. Gaming and gambling
+
+We will work with data from the following study:
+Zendle, D. (2020) Beyond loot boxes: a variety of gambling-like practices in video games are linked to both problem gambling and disordered gaming. https://doi.org/10.7717/peerj.9466
+
+```{r}
+# Upload the data from GitHub
+gaming <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//gaming.csv")
+
+# View first 6 rows
+head(gaming)
+```
+
+-----------------------------------------------------------------------------
+
+#### **Try it! Which variable(s) should be considered as the outcome? Fit a model to predict this outcome based on some predictors.**
+
+```{r}
+# Type any code here
+
+```
+
+------------------------------------------------------------------------
+
+## Recommended Resources
+
+1.  [R for Data Science](https://r4ds.hadley.nz/)
+2.  [Introductory Statistics in R](https://tjfisher19.github.io/introStatModeling/introductory-statistics-in-r.html)
