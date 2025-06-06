@@ -8,6 +8,7 @@ Recordings:
 - [Day 2](https://utexas.zoom.us/rec/share/1g1YjS1pJ8OAlF97LiU1HH2NIYanGUPVOnkHJNqeh0xlAE5uS3vHCGWSsrOH97N_.qq8eLjliNcLJzqoc)
 - [Day 3](https://utexas.zoom.us/rec/share/4U2ksKlB68M4WeUfZcTznM08oO9i_KWQaIN-YLw40t_fTQ_u8dhT_h86ObelPArG.mUVx9pv-sWM1HRbc)
 - [Day 4](https://utexas.zoom.us/rec/share/7Lul5obsAqgJHozdtfeeW__NsYdIyRgXvK1C8nPr5jOhUwQFBALd3jNqC1dLqKrk.k-YKvFfintQXNQjN)
+- [Day 5](https://utexas.zoom.us/rec/share/D_QB_VvDQi4l7ZG0eMJd29gqf1p5LwlpoYWO4qHQi7WXSzeJbipFnWOQ0vdOb9yr._pTIWdGD-PrS2-sI)
 
 ## Access RStudio
 Go to https://gsafcomp02.ccbb.utexas.edu and select RStudio. Further instructions for how to log in are provided in class/by email.
