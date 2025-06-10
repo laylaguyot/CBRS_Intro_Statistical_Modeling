@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 1. Introduction to R
 
-This file is an **R Markdown** document. R Markdown documents combine text (with some formatting options), R code, and R outputs including figures. They are a great way to produce self-contained, reproducible, well-documented data analyses.
+This file is an **R Markdown** ***`document`***. R Markdown documents combine text (with some formatting options), R code, and R outputs including figures. They are a great way to produce self-contained, reproducible, well-documented data analyses.
 
 ### a. Basics
 
@@ -39,7 +39,7 @@ We can use R as a calculator:
 
 ##### Try it! #####
 # Multiply 6 by all previous whole numbers (this is called the factorial of 6)
-
+6*5*4*3*2*1
 ```
 
 But luckily there are some built-in functions (called base R):
@@ -50,7 +50,7 @@ factorial(6)
 
 ##### Try it! #####
 # What should we expect for log(100)? What does R give us?
-
+log(100)
 ```
 
 To learn more about specific functions, R has a great documentation within R Studio but also online:
@@ -62,7 +62,7 @@ To learn more about specific functions, R has a great documentation within R Stu
 ##### Try it! #####
 # In the documentation you can read about the function that computes log base 10.
 # What is log base 10 of 100?
-
+log10(100)
 ```
 
 ### b. Types of objects
@@ -95,7 +95,7 @@ length(flipper_length_mm)
 
 ##### Try it! #####
 # What is the mean flipper length?
-
+mean(flipper_length_mm)
 ```
 
 More importantly, we will manipulate datasets usually in the form of **dataframes**:
@@ -167,19 +167,19 @@ When we start exploring data, we should learn about the source and context of th
 
 #### **Try it! Identify the following information about the dataset:**
 
--   **Study design:** 
+-   **Study design:** observational study
 
--   **Population:** 
+-   **Population:** penguins in Palmer Archipelago
 
--   **Sample:** 
+-   **Sample:** penguins in the dataset / have measurements for
 
--   **Number of sampling units:** 
+-   **Number of sampling units:** 344 penguins
 
--   **Number of variables:** 
+-   **Number of variables:** 8 variables
 
 ```{r}
-# Type any code here
-
+# Check the structure of the dataset
+str(my_penguins)
 ```
 
 When provided, it is very important to read the documentation to understand how the variables were measured (which unit). For example, in the documentation, we learn that there are 3 species of penguins:
@@ -192,7 +192,7 @@ To guide our exploration, we formulate research questions. For example:
 
 -   Are there any differences between the three species of penguins in terms of their flipper length? (this question is more specific)
 
--   **Write your own**:
+-   **Write your own**: Do male and female penguins differ in their body mass?
 
 Our research question will determine how to analyze our data, which variables are involved, and which statistical model we should consider.
 
@@ -238,7 +238,29 @@ my_penguins |>
 
 ```{r}
 # Type any code here
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = flipper_length_mm), 
+                 # Set bin width and center 
+                 binwidth = 10, center = 5, color = "black")
 
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = flipper_length_mm), 
+                 # Set bin width and center 
+                 binwidth = 1, center = 0.5, color = "black")
+
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = flipper_length_mm), 
+                 # Set bin width and center 
+                 binwidth = 20, center = 10, color = "black")
 ```
 
 We report values of center (mean or median) and spread (standard deviation or IQR) as summary statistics:
@@ -315,7 +337,7 @@ my_penguins |>
   group_by(species) |>
   # Summary statistics
   summarize(
-    mean = mean(flipper_length_mm, na.rm = TRUE),
+    mean = mean(flipper_length_mm),
     median = median(flipper_length_mm, na.rm = TRUE),
     sd = sd(flipper_length_mm, na.rm = TRUE),
     IQR = IQR(flipper_length_mm, na.rm = TRUE),
@@ -359,7 +381,13 @@ my_penguins |>
 
 ```{r}
 # Type any code here
-
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_bar and define mapping aesthetics with fill
+  geom_bar(aes(x = sex, fill = species), position = "fill") +
+  # Adjust label on y-axis
+  labs(y = "Proportion of species")
 ```
 
 We can report counts for each pair of groups:
@@ -427,16 +455,24 @@ my_penguins |>
        caption = "Palmer Station Antarctica LTER and K. Gorman. 2020.") 
 ```
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 #### **Try it! Investigate the following question using a visualization and summary statistics: Do female and male penguins differ in their body mass?**
 
 ```{r}
 # Type any code here
-
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_boxplot and define mapping aesthetics: x = predictor, y = outcome
+  geom_boxplot(aes(x = sex, y = body_mass_g, fill = sex)) +
+  # Add the data
+  geom_jitter(aes(x = sex, y = body_mass_g))
 ```
 
--------------------------------------------------------------------------------
+Male penguins tend to have higher body mass than females on average: the distribution of male body mass is shifted higher overall, however, this is some overlap.
+
+------------------------------------------------------------------------
 
 ## 3. Introduction to Hypothesis Testing
 
@@ -579,4 +615,3 @@ A small p-value suggests that such a difference would be unlikely to occur by ch
 
 1.  [R for Data Science](https://r4ds.hadley.nz/)
 2.  [Introductory Statistics in R](https://tjfisher19.github.io/introStatModeling/introductory-statistics-in-r.html)
-

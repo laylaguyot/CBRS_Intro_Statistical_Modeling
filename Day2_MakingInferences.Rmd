@@ -108,7 +108,21 @@ ggplot(data.frame(z = c(-5, 5)), aes(z)) +
 
 ```{r}
 # Type any code here
-
+ggplot(data.frame(z = c(-5, 5)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Standard Normal Distribution",
+       x = "z", y = "Density")
+ggplot(data.frame(z = c(-5, 5)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 2, sd = 1), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Standard Normal Distribution",
+       x = "z", y = "Density")
+ggplot(data.frame(z = c(-5, 5)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = -1, sd = 2), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Standard Normal Distribution",
+       x = "z", y = "Density")
 ```
 
 We can only find probabilities for a range of values for the normal distribution (probability of getting exactly one value among infinitely many is 0):
@@ -164,7 +178,12 @@ Did we all sample the same fish? Why/Why not?
 
 ```{r}
 # Type any code here
+(136-106)/30
 
+# These are all equivalent
+1-pnorm(q = 136, mean = 106, sd = 30)
+pnorm(q = 136, mean = 106, sd = 30, lower.tail = FALSE)
+pnorm(q = (136-106)/30, mean = 0, sd = 1, lower.tail = FALSE)
 ```
 
 Now, let's sample more than one fish, with 100 fish in our sample:
@@ -194,8 +213,22 @@ Refer to [this applet](https://www.zoology.ubc.ca/~whitlock/Kingfisher/CLT.htm) 
 #### **Try it! Assume a population of fish has a mean length of 106 mm and standard deviation of 30 mm. Among a sample of 100 fish, you found a mean fish length of 136 mm. What was the probability to observe this mean of 136 mm or higher?**
 
 ```{r}
-# Type any code here
+# Population distribution
+ggplot(data.frame(z = c(0, 200)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 106, sd = 30), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Normal Distribution",
+       x = "length", y = "Density")
 
+# Sampling distribution
+ggplot(data.frame(z = c(0, 200)), aes(z)) +
+  stat_function(fun = dnorm, args = list(mean = 106, sd = 30/sqrt(100)), 
+                geom = "line", linewidth = 1) +
+  labs(title = "Normal Distribution",
+       x = "mean length", y = "Density")
+
+# Probability of getting a sample mean higher than 136
+1-pnorm(q = 136, mean = 106, sd = 30/sqrt(100))
 ```
 
 ## 2. Common Parametric Tests
@@ -214,6 +247,7 @@ my_penguins <- as.data.frame(penguins)
 This distribution is similar to the normal distribution but needs one more parameter: degrees of freedom.
 
 ```{r}
+# Represent the t-distribution with degree of freedom 5
 ggplot(data.frame(t = c(-5, 5)), aes(t)) +
   stat_function(fun = dt, args = list(df = 5), 
                 geom = "line", linewidth = 1) +
@@ -265,13 +299,30 @@ my_gentoo <- my_penguins |>
 
 1.  Hypotheses:
 
+-   H0: The mean body mass of Gentoo penguins is 5440 grams.
+
+-   Ha: The mean body mass of Gentoo penguins is not 5440 grams.
+
 2.  Find descriptive statistics:
 
 ```{r}
-# Make a plot
-
+my_gentoo |>
+  # Make a plot
+  ggplot() +
+  # Use geom_histogram and define mapping aesthetics
+  geom_histogram(aes(x = body_mass_g),
+                 # Set bin width and center 
+                 binwidth = 100, center = 50, color = "black")
 # Report mean and sd
-
+my_gentoo |>
+  # Summary statistics
+  summarize(
+    mean = mean(body_mass_g, na.rm = TRUE),
+    median = median(body_mass_g, na.rm = TRUE),
+    sd = sd(body_mass_g, na.rm = TRUE),
+    IQR = IQR(body_mass_g, na.rm = TRUE),
+    min_mass = min(body_mass_g, na.rm = TRUE),
+    max_mass = max(body_mass_g, na.rm = TRUE))
 ```
 
 3.  Compare the estimate to the claim:
@@ -281,19 +332,17 @@ my_gentoo <- my_penguins |>
 t.test(my_gentoo$body_mass_g, mu = 5440)
 ```
 
-4.  Interpret in context:
+4.  Interpret in context: The population mean body mass of the Gentoo penguins is significantly different from 5440 grams (t = -8, df = 122, p \< 0.001).
 
-
-Note that R provides the 95% confidence interval in the output. Write a sentence to interpret it:
-
+Note that R provides the 95% confidence interval in the output. Write a sentence to interpret it: We are 95% confident that the true mean body mass of Gentoo penguins is between 4986 and 5166 grams.
 
 What do you think about the assumptions?
 
--   Random sample
+-   Random sample: check context
 
--   Independent observations
+-   Independent observations: check context (would not be met if some penguins were siblings for example)
 
--   Normality
+-   Normality: distribution of body mass is approximately normally distributed
 
 ### b. Independent t-test
 
@@ -301,13 +350,33 @@ What do you think about the assumptions?
 
 1.  Hypotheses:
 
+-   H0: The mean body mass of male penguins equals that of female penguins.
+
+-   Ha: The mean body mass of male penguins differs from that of female penguins.
+
 2.  Find descriptive statistics:
 
 ```{r}
-# Make a plot
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_boxplot and define mapping aesthetics: x = predictor, y = outcome
+  geom_boxplot(aes(y = body_mass_g, x = sex, fill = sex)) +
+  # Add the data
+  geom_jitter(aes(y = body_mass_g, x = sex))
 
 # Report mean and sd
-
+my_penguins |>
+  # Split the data in groups 
+  group_by(sex) |>
+  # Summary statistics
+  summarize(
+    mean = mean(body_mass_g, na.rm = TRUE),
+    median = median(body_mass_g, na.rm = TRUE),
+    sd = sd(body_mass_g, na.rm = TRUE),
+    IQR = IQR(body_mass_g, na.rm = TRUE),
+    min_mass = min(body_mass_g, na.rm = TRUE),
+    max_mass = max(body_mass_g, na.rm = TRUE))
 ```
 
 3.  Compare the estimate to the claim:
@@ -317,11 +386,9 @@ What do you think about the assumptions?
 t.test(body_mass_g ~ sex, data = my_penguins, var.equal = TRUE)
 ```
 
-4.  Interpret in context:
+4.  Interpret in context: There is a significant difference between the average body mass in female/male penguins (t = -8.54, df = 331, p \< 0.001).
 
-
-Note that R provides the 95% confidence interval in the output. Write a sentence to interpret it:
-
+Note that R provides the 95% confidence interval in the output. Write a sentence to interpret it: We are 95% confident the mean body mass of male penguins is between 526 and 841 grams more than female.
 
 What do you think about the assumptions?
 
@@ -333,15 +400,20 @@ What do you think about the assumptions?
 
 -   Equal variance
 
-
 ### F-Distribution
 
 ```{r}
+# Represent the F-distribution with degree of freedom 5, 10
 ggplot(data.frame(F = c(0, 5)), aes(x = F)) +
   stat_function(fun = df, args = list(df1 = 5, df2 = 10), 
                 geom = "line", linewidth = 1) +
+  stat_function(fun = df, args = list(df1 = 5, df2 = 10), 
+                geom = "area", xlim = c(4,5)) +
   labs(title = "F Distribution (df1 = 5, df2 = 10)",
        x = "F", y = "Density")
+
+# Corresponding probability of getting F > 4
+1- pf(q = 4, df1 = 5, df2 = 10)
 ```
 
 ### c. ANOVA
@@ -350,13 +422,26 @@ ggplot(data.frame(F = c(0, 5)), aes(x = F)) +
 
 1.  Hypotheses:
 
+-   H0: The mean body mass is the same across species.
+
+-   Ha: At least of the mean body mass is different compared to other species.
+
 2.  Find descriptive statistics:
 
 ```{r}
-# Make a plot
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_boxplot and define mapping aesthetics: x = predictor, y = outcome
+  geom_boxplot(aes(x = body_mass_g, y = species, fill = species)) +
+  # Add the data
+  geom_jitter(aes(x = body_mass_g, y = species))
 
 # Report mean and sd
-
+my_penguins |>
+  group_by(species) |>
+  summarize(mean = mean(body_mass_g, na.rm = TRUE),
+            sd = sd(body_mass_g, na.rm = TRUE))
 ```
 
 3.  Compare the estimate to the claim:
@@ -367,17 +452,19 @@ anova_model <- aov(body_mass_g ~ species, data = my_penguins)
 summary(anova_model)
 ```
 
-4.  Interpret in context:
-
+4.  Interpret in context: There is a significant difference in population mean body mass across the three species (F = 343.6, df = (2, 339), p \< 0.001).
 
 Note that R does not provide the $R^2$ value confidence interval in the output. However you can calculate it based on the output of the test:
 
 ```{r}
 # Calculate R-squared
-
+ss_total <- 146864214 + 72443483
+ss_between <- 146864214
+R_squared <- ss_between / ss_total
+R_squared
 ```
 
-Write a sentence to interpret it:
+Write a sentence to interpret it: About 67% of the variation in body mass can be explained by differences between species.
 
 
 What do you think about the assumptions?
@@ -390,7 +477,6 @@ What do you think about the assumptions?
 
 -   Equal variance
 
-
 #### Post-Hoc analysis
 
 Are all the species different from one another?
@@ -400,9 +486,12 @@ Are all the species different from one another?
 TukeyHSD(anova_model)
 ```
 
-#### Chi-squared Distribution
+There are statistical significant differences in body mass between Gentoo-Adelie and Gentoo-Chinstrap, but not between Chinstrap-Adelie.
+
+### Chi-squared Distribution
 
 ```{r}
+# Represent the X2-distribution with degree of freedom 3
 ggplot(data.frame(x2 = c(0, 10)), aes(x2)) +
   stat_function(fun = dchisq, args = list(df = 3), 
                 geom = "line", linewidth = 1) +
@@ -416,13 +505,21 @@ ggplot(data.frame(x2 = c(0, 10)), aes(x2)) +
 
 1.  Hypotheses:
 
+-   H0: All species are equally represented (1/3 each).
+
+-   Ha: The proportions of penguin species are not all equal.
+
 2.  Find descriptive statistics:
 
 ```{r}
-# Make a plot
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_bar and define mapping aesthetics
+  geom_bar(aes(x = species))
 
 # Report frequencies
-
+table(my_penguins$species)
 ```
 
 3.  Compare the estimate to the claim:
@@ -432,8 +529,7 @@ ggplot(data.frame(x2 = c(0, 10)), aes(x2)) +
 chisq.test(table(my_penguins$species), p=c(1/3,1/3,1/3))
 ```
 
-4.  Interpret in context:
-
+4.  Interpret in context: The proportions of penguin species are not all equal to 1/3 (X-squared = 31.9, df = 2, p-value < 0.001).
 
 What do you think about the assumptions?
 
@@ -445,28 +541,44 @@ What do you think about the assumptions?
 
 ### e. Chi-squared Test of Independence
 
-> Research Question: Is there a difference in sex distribution across the different species?
+> Research Question: Is there a difference in the sex distribution across species?
 
 1.  Hypotheses:
+
+-   H0: Species and sex are independent.
+
+-   Ha: Species and sex are not independent (dependent).
 
 2.  Find descriptive statistics:
 
 ```{r}
-# Make a plot
+my_penguins |>
+  # Make a plot
+  ggplot() +
+  # Use geom_bar and define mapping aesthetics with fill
+  geom_bar(aes(x = species, fill = sex), position = "fill") 
 
-# Report frequencies
-
+# Report frequencies and percentages
+my_penguins |>
+  # Report counts for each pair of groups
+  count(species, sex) |>
+  # Split by one group
+  group_by(species) |>
+  # Calculate proportions
+  mutate(prop = n / sum(n)) |>
+  # Reshape results
+  select(-n) |>
+  pivot_wider(names_from = sex, values_from = prop, values_fill = 0)
 ```
 
 3.  Compare the estimate to the claim:
 
 ```{r}
 # Conduct the test
-chisq.test(table(my_penguins$species, my_penguins$sex), correct = FALSE)
+chisq.test(table(my_penguins$species, my_penguins$sex))
 ```
 
-4.  Interpret in context:
-
+4.  Interpret in context: The proportions of male/female penguins is not significant different across species (X-squared = 0.05, df = 2, p-value = 0.976).
 
 What do you think about the assumptions?
 

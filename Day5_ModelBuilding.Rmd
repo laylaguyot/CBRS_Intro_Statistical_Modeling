@@ -33,7 +33,7 @@ head(peru_bp)
 
 ### a. Exploring data
 
-It is always a good idea to explore our data: 
+It is always a good idea to explore our data:
 
 ```{r}
 library(psych)
@@ -63,7 +63,7 @@ fit_step <- step(fit_start, direction = "forward", scope = formula(fit_full))
 summary(fit_step)
 ```
 
-At each step, R considers adding each available predictor (`+`). It calculates the AIC (Akaike Information Criterion) for the model if that predictor is added: R chooses the variable that gives the greatest AIC improvement (lowest AIC). We repeat this process until no predictor improves AIC, and the model is finalized.
+At each step, R considers adding each available predictor (`+`). It calculates the AIC (Akaike Information Criterion) for the model if that predictor is added: R chooses the variable that gives the greatest improvement (lowest AIC). We repeat this process until no predictor improves AIC, and the model is finalized.
 
 Why AIC? AIC balances fit and complexity. A lower AIC means a better trade-off between:
 
@@ -107,32 +107,40 @@ plot(summary(best_models)$bic, xlab = "Number of predictors", ylab = "BIC", type
 
 How many predictors would you consider? Which one should be included?
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 #### **Try it! Fit the model suggested by the best subset algorithm.**
 
 ```{r}
-# Type any code here
-
+# Best 5 predictors
+fit_5 <- lm(Systol ~ Age + Years + FracLife + Weight + Chin, 
+               data = peru_bp)
+summary(fit_5)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 *Note: These methods do not consider any potential issues there might be with the model assumptions for example. We are also not considering potential interaction effects.*
 
 ### d. Multicollinearity
 
-Multicollinearity occurs when two or more predictors are highly correlated with each other. 
-This can make it difficult to estimate the individual effect of each predictor on the response.
+Multicollinearity occurs when two or more predictors are highly correlated with each other. This can make it difficult to estimate the individual effect of each predictor on the response.
 
-One way to assess multicollinearity is to look at the **Variance Inflation Factor (VIF)**. 
-A VIF above 5 (or 10, depending on context) suggests potential multicollinearity.
+One way to assess multicollinearity is to look at the **Variance Inflation Factor (VIF)**. A VIF above 5 (or 10, depending on context) suggests potential multicollinearity.
 
 ```{r eval=FALSE}
 library(car)
 # Calculate VIF
-vif(fit_model)
+vif(fit_5)
+
+# Remove Years
+fit_4 <- lm(Systol ~ Age + FracLife + Weight + Chin, 
+               data = peru_bp)
+summary(fit_4)
+vif(fit_4)
 ```
+
+Removing `Years` dropped the VIFs for the remaining predictors, helping to address multicollinearity.
 
 ## 2. Addressing Potential Issues
 
@@ -140,8 +148,7 @@ Let's explore different datasets and address any potential issues that may come 
 
 ### a. Acoustic of woven fabric
 
-We will work with data from the following study:
-Tang, X., Kong, D., Yan, X. (2018). Multiple Regression Analysis of a Woven Fabric Sound Absorber. Textile Research Journal. https://doi.org/10.1177/0040517518758001
+We will work with data from the following study: Tang, X., Kong, D., Yan, X. (2018). Multiple Regression Analysis of a Woven Fabric Sound Absorber. Textile Research Journal. <https://doi.org/10.1177/0040517518758001>
 
 ```{r}
 # Upload the data from GitHub
@@ -151,21 +158,37 @@ acoustics <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/mai
 head(acoustics)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 #### **Try it! Fit a model to predict the acoustic based on `acoustic3` by (try 1 at a time): air permeability, weight, perforation ratio, thickness. Check assumptions. Any issues arise?**
 
 ```{r}
-# Type any code here
+# Explore data
+pairs.panels(acoustics[c("acoustic3","airPerm","weight","perforation","thickness")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB", # color of histogram
+             smooth = FALSE, density = FALSE, ellipses = FALSE)
 
+# Fit model with perforation
+fit_model <- lm(acoustic3 ~ perforation, data = acoustics)
+summary(fit_model)
+plot(fit_model)
+
+# Try a transformation
+acoustics |>
+  mutate(perforation_inv = 1/perforation) -> acoustics
+
+# Fit model
+fit_model <- lm(acoustic3 ~ perforation_inv, data = acoustics)
+summary(fit_model)
+plot(fit_model)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 ### b. Roasted hazelnuts
 
-We will work with data from the following study:
-Şimşek, A. (2007). The use of 3D-nonlinear regression analysis in mathematics modeling of colour change in roasted hazelnuts. Journal of food engineering, 78(4), 1361-1370. https://doi.org/10.1016/j.jfoodeng.2006.01.008
+We will work with data from the following study: Şimşek, A. (2007). The use of 3D-nonlinear regression analysis in mathematics modeling of colour change in roasted hazelnuts. Journal of food engineering, 78(4), 1361-1370. <https://doi.org/10.1016/j.jfoodeng.2006.01.008>
 
 ```{r}
 # Upload the data from GitHub
@@ -175,16 +198,28 @@ hazelnuts <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/mai
 head(hazelnuts)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 #### **Try it! Fit a model to predict the `color_change` based on `temperature` and `time`. Check assumptions. Any issues arise?**
 
 ```{r}
-# Type any code here
+# Explore data
+pairs.panels(hazelnuts[c("color_change", "temperature","time")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB", # color of histogram
+             smooth = FALSE, density = FALSE, ellipses = FALSE)
 
+# Fit model
+fit_model <- lm(color_change ~ temperature + time, data = hazelnuts)
+
+# Summary
+summary(fit_model)
+
+# Check assumptions
+plot(fit_model)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 Let's consider a polynomial regression:
 
@@ -198,7 +233,8 @@ hazelnuts <- hazelnuts |>
          temp_c.time_c = temp_c*time_c)
 
 # Fit the polynomial regression model
-fit_model <- lm(color_change ~ temp_c + temp2 + time_c + time2 + temp_c.time_c, hazelnuts)
+fit_model <- lm(color_change ~ temp_c + temp2 + time_c + time2 + temp_c.time_c, 
+                hazelnuts)
 
 # Display the summary table for the regression model 
 summary(fit_model)
@@ -209,8 +245,7 @@ plot(fit_model)
 
 ### c. Cognition older adults
 
-We will work with data from the following study:
-Sherwood, J., Inouye, C., Webb, S., Zhou A, Anderson, E., & Spink, N. (2019) Relationship between physical and cognitive performance in community dwelling, ethnically diverse older adults: a cross-sectional study. https://doi.org/10.7717/peerj.6159
+We will work with data from the following study: Sherwood, J., Inouye, C., Webb, S., Zhou A, Anderson, E., & Spink, N. (2019) Relationship between physical and cognitive performance in community dwelling, ethnically diverse older adults: a cross-sectional study. <https://doi.org/10.7717/peerj.6159>
 
 ```{r}
 # Upload the data from GitHub
@@ -220,21 +255,45 @@ cognition <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/mai
 head(cognition)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 #### **Try it! Fit a model to predict `TMTB` based on `Heart_Rate` and `Education`. Check assumptions. Any issues arise?**
 
 ```{r}
-# Type any code here
+# Explore data
+pairs.panels(cognition[c("TMTB", "Heart_Rate","Education")], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB", # color of histogram
+             smooth = FALSE, density = FALSE, ellipses = FALSE)
 
+# Fit model
+fit_model <- lm(TMTB ~ Heart_Rate + Education, data = cognition)
+summary(fit_model)
+plot(fit_model)
+
+# Try two transformations
+cognition |>
+  mutate(TMTB_log = log10(TMTB),
+         TMTB_sqrt = sqrt(TMTB)) -> cognition
+
+# Fit model with log
+fit_model <- lm(TMTB_log ~ Heart_Rate + Education, data = cognition)
+summary(fit_model)
+plot(fit_model)
+
+# Fit model with sqrt
+fit_model <- lm(TMTB_sqrt ~ Heart_Rate + Education, data = cognition)
+summary(fit_model)
+plot(fit_model)
 ```
 
------------------------------------------------------------------------------
+The log-transformation addressed the issues with the assumptions the best.
+
+------------------------------------------------------------------------
 
 ### d. Gaming and gambling
 
-We will work with data from the following study:
-Zendle, D. (2020) Beyond loot boxes: a variety of gambling-like practices in video games are linked to both problem gambling and disordered gaming. https://doi.org/10.7717/peerj.9466
+We will work with data from the following study: Zendle, D. (2020) Beyond loot boxes: a variety of gambling-like practices in video games are linked to both problem gambling and disordered gaming. <https://doi.org/10.7717/peerj.9466>
 
 ```{r}
 # Upload the data from GitHub
@@ -244,14 +303,11 @@ gaming <- read_csv("https://raw.githubusercontent.com/laylaguyot/datasets/main//
 head(gaming)
 ```
 
------------------------------------------------------------------------------
+------------------------------------------------------------------------
 
 #### **Try it! Which variable(s) should be considered as the outcome? Fit a model to predict this outcome based on some predictors.**
 
-```{r}
-# Type any code here
-
-```
+Some reasonable outcomes to model would be indicators of `problem_gambling` or `gaming_disorder`. We should fit a logistic regression model.
 
 ------------------------------------------------------------------------
 

@@ -125,12 +125,21 @@ penguins_clean |>
 
 A linear regression model is built by minimizing the sum of squared residuals.
 
-#### **Try it! Find the mean of the residuals. Why does it make sense to get this value?**
+#### **Try it! Find the mean of the predicted values and mean of body mass. Why does it make sense to get this value?**
 
 ```{r}
 # Write and submit code here!
-
+penguins_clean |> 
+  # First add predicted values based on model
+  mutate(predicted = predict(fit_model)) |> 
+  # Calculate residuals = observed - predicted
+  mutate(residual = resid(fit_model)) |>
+  summarize(mean(predicted),
+            mean(body_mass_g),
+            mean(residual))
 ```
+
+The mean of predicted values is equal to the mean of observed body mass. This always happens in simple linear regression because the regression line goes through the point (mean of x, mean of y).
 
 ### e. Assessing Assumptions
 
@@ -160,7 +169,11 @@ There is no clear violation of the assumptions so the assumptions can be conside
 
 The notation $\beta_1$ refers to the slope for the population of penguins. Then the hypotheses to test about the significance of the slope are:
 
-1.  Hypotheses:
+1.  Hypotheses: 
+
+-   H0: The population slope between body mass and flipper length is 0
+
+-   Ha: The population slope between body mass and flipper length is not 0
 
 2.  To find descriptive statistics and 3. Compare the estimate to the claim, we use the model summary:
 
@@ -236,6 +249,8 @@ mean(resid(fit_model)^2)
 ```{r}
 # Calculate RMSE of regression model: square root of mean residuals squared
 sqrt(mean(resid(fit_model)^2))
+
+sd(penguins_clean$body_mass_g)
 ```
 
 The lower the RMSE, the better a model fits a dataset and the more reliable our predicted values can be. Note that the RMSE is reported in the same unit as the **response** variable.
@@ -251,9 +266,18 @@ The lower the RMSE, the better a model fits a dataset and the more reliable our 
 -   **How does this model compare to the one using flipper length: is it better at predicting body mass?**
 
 ```{r}
-# Type any code here
+# Use bill length as another predictor
+fit_model <- lm(body_mass_g ~ bill_length_mm, data = penguins_clean)
 
+# Model summary
+summary(fit_model)
+
+# Model assumptions
+plot(fit_model, which = 1)
+plot(fit_model, which = 2) 
 ```
+
+Bill length is a significant linear predictor of body mass (t = 13.3, df = 331, p < 0.001), however, there seems to be an issue with the assumption of equal variance. Previously, Multiple R-squared was 0.7621 and now it is 0.3475: a lot less variation in body mass is explained by bill length compared to flipper length. The first model (using flipper length as a predictor) would be better at predicting body mass.
 
 ------------------------------------------------------------------------
 
@@ -314,6 +338,18 @@ $\widehat{bill_depth} = 10.56526 + 0.20044 * bill_length - 1.93308 * Chinstrap -
 
 Note: The categories for species have been switched to dummy variables. One of the categories (first in alphabetical order) is set as the reference.
 
+If a penguin in Adelie:
+
+$\widehat{bill_depth} = 10.56526 + 0.20044 * bill_length$
+
+If a penguin is Chinstrap:
+
+$\widehat{bill_depth} = 10.56526 + 0.20044 * bill_length - 1.93308 * 1$
+
+If a penguin is Gentoo:
+
+$\widehat{bill_depth} = 10.56526 + 0.20044 * bill_length - 5.10332 * 1$
+
 Let's now visualize the three models:
 
 ```{r}
@@ -346,11 +382,17 @@ There is no clear violation of linearity or normality but maybe about equal vari
 
 We need to write a set of hypotheses for each effect (predictor) we are testing in the model:
 
-*Hypothesis Set 1* $H_0$: Controlling for species, bill length does not explain variation in bill depth. 
-$H_A$: Controlling for species, bill length does explain variation in bill depth.
+*Hypothesis Set 1* 
 
-*Hypothesis Set 2* $H_0$: Controlling for bill length, the different species have an equal mean bill depth. 
-$H_A$: Controlling for bill length, the different species do not have an equal mean bill depth.
+-   H0: Controlling for species, bill length does not explain variation in bill depth.
+
+-   Ha: Controlling for species, bill length does explain variation in bill depth.
+
+*Hypothesis Set 2* 
+
+-   H0: Controlling for bill length, the different species have an equal mean bill depth. 
+
+-   Ha: Controlling for bill length, the different species do not have an equal mean bill depth.
 
 Take a look again at the model summary:
 
@@ -361,8 +403,11 @@ summary(fit_model)
 
 Write the conclusion and interpret the slopes:
 
+The linear relation between bill length and bill depth is significant, controlling for other species (t = 11.3, df = 329, p \< 0.001).
 
+The mean difference in bill depth between Adelie and Chinstrap species is significant, controlling for bill length (t = -8.5, df = 329, p \< 0.001). 
 
+The mean difference in bill depth between Adelie and Gentoo species is significant, controlling for bill length (t = -26.3, df = 329, p \< 0.001).
 
 ### e. Performance
 
@@ -402,10 +447,12 @@ penguins_clean |>
   # Make a plot
   ggplot() +
   # Scatterplot
-  geom_point(aes(x = bill_length_c, y = bill_depth_mm, color = species)) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
   # Visualize the regression line for each species
-  geom_smooth(aes(x = bill_length_c, y = bill_depth_mm, color = species),
-              method = "lm", se = FALSE)
+  geom_smooth(aes(x = bill_length_mm, y = bill_depth_mm, color = species),
+              method = "lm", se = FALSE) + 
+  # Add limits to x and y-axes
+  xlim(0,75) + ylim(0,25)
 ```
 
 The lines are not strictly parallel anymore!
@@ -414,7 +461,7 @@ Let's fit the model with an interaction (use `*` instead of `+`):
 
 ```{r}
 # Fit the model with interaction
-fit_model <- lm(bill_depth_mm ~ bill_length_c + species, data = penguins_clean)
+fit_model <- lm(bill_depth_mm ~ bill_length_mm * species, data = penguins_clean)
 
 # Take a look at the model summary
 summary(fit_model)
@@ -431,9 +478,16 @@ All slopes are significant! The adjusted R-squared has only slightly improved th
 -   **Should we consider an interaction?**
 
 ```{r}
-# Type any code here
+# Add sex as another predictor
+fit_model <- lm(body_mass_g ~ bill_length_mm + sex, data = penguins_clean)
+summary(fit_model)
 
+# If we consider an interaction 
+fit_model <- lm(body_mass_g ~ bill_length_mm * sex, data = penguins_clean)
+summary(fit_model)
 ```
+
+Adding `sex` as another predictor did increase Multiple R-squared and Adjusted R-squared, so our model has improved by adding another predictor. However, Multiple R-squared and Adjusted R-squared are the same when adding an interaction (no improvement) and the interaction is not significant (t = -0.7, df = 329, p = 0.502).
 
 ------------------------------------------------------------------------
 
